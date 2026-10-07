@@ -31,6 +31,10 @@ input[type=text]:focus, select:focus { border-color:#005691; outline:none; }
 
 .submit-btn { background:#E20015; color:#fff; border:none; padding:16px; width:100%; margin-top:25px; font-size:18px; font-weight:bold; border-radius:8px; cursor:pointer; }
 .submit-btn:disabled { background:#ccc; cursor:not-allowed; }
+.share-btn { background:#005691; color:#fff; border:none; padding:14px; width:100%; margin-top:12px; font-size:17px; font-weight:bold; border-radius:8px; cursor:pointer; }
+.share-btn:disabled { background:#ccc; cursor:not-allowed; }
+#mail-hint { display:none; margin-top:12px; padding:12px; border:1px solid #cde; background:#f3f8fc; border-radius:8px; font-size:14px; line-height:1.5; }
+#mail-hint a { display:inline-block; margin-top:6px; padding:10px 14px; background:#005691; color:#fff; border-radius:6px; text-decoration:none; font-weight:bold; }
 </style>
 </head>
 <body>
@@ -79,7 +83,10 @@ input[type=text]:focus, select:focus { border-color:#005691; outline:none; }
     <div id="img-list"></div>
   </div>
 
-  <button class="submit-btn" id="submitBtn" onclick="generatePDF()">📄 สร้างเอกสาร PDF</button>
+  <button class="submit-btn" id="submitBtn" style="margin-top:25px;" onclick="generatePDF()">📄 สร้างเอกสาร PDF</button>
+  <button class="share-btn" id="shareBtn" onclick="sharePDF()">📧 แชร์ไฟล์ PDF (แนบไฟล์ส่งเมล)</button>
+  <button class="share-btn" style="background:#3a7ab0;" onclick="openMail()">✉️ เปิดอีเมลถึง mfh2hmj@bosch.com</button>
+  <div id="mail-hint"></div>
 </div>
 
 <script>
@@ -221,22 +228,31 @@ function drawPage(data) {
     g.fillText(t, x, y);
     return g.measureText(t).width;
   };
-  const value = (v, x, y, size) => text(v || PLACEHOLDER, x, y, size, v ? '#000' : '#777');
+  // ข้อความที่กรอกแล้วใช้ฟอนต์ใหญ่ ถ้ายาวเกินพื้นที่จะย่อลงอัตโนมัติ (ไม่เล็กกว่า 14px)
+  const value = (v, x, y, emptySize, fillSize, maxW) => {
+    if (!v) return text(PLACEHOLDER, x, y, emptySize, '#777');
+    let size = fillSize;
+    for (; size > 14; size--) {
+      g.font = size + 'px ' + FONT;
+      if (g.measureText(v).width <= maxW) break;
+    }
+    return text(v, x, y, size, '#000');
+  };
 
   // --- Mold No / Problem ---
   let w = text('Mold No:', 62, 69, 38, '#000');
   g.fillStyle = '#000'; g.fillRect(62, 80, w, 2);
-  value(data.mold, 62 + w + 4, 69, 16);
+  value(data.mold, 62 + w + 10, 69, 16, 32, 740 - (62 + w + 10));
 
   w = text('Problem :', 62, 136, 38, '#7a1f7a');
   g.fillStyle = '#7a1f7a'; g.fillRect(62, 147, w, 2);
-  value(data.problem, 62 + w + 4, 136, 16);
+  value(data.problem, 62 + w + 10, 136, 16, 32, 1095 - (62 + w + 10));
 
   // --- Request by / Accept by ---
   w = text('Request by:', 765, 51, 20, '#000');
-  value(data.req, 765 + w + 2, 51, 15);
+  value(data.req, 765 + w + 6, 51, 15, 24, 1095 - (765 + w + 6));
   w = text('Accept by:', 765, 91, 20, '#000');
-  value(data.acc, 765 + w + 2, 91, 15);
+  value(data.acc, 765 + w + 6, 91, 15, 24, 1095 - (765 + w + 6));
 
   // --- กรอบสีม่วง + รูปภาพทั้งหมด (จัดเป็นตาราง) ---
   const FX = 27, FY = 160, FW = 864, FH = 535, B = 3;
@@ -306,39 +322,103 @@ function drawPage(data) {
   return pc;
 }
 
+function buildPDF() {
+  const moldNo = document.getElementById('moldNo').value.trim();
+  const problem = document.getElementById('problem').value.trim();
+  const page = drawPage({
+    mold: moldNo,
+    problem,
+    req: document.getElementById('requestBy').value.trim(),
+    acc: document.getElementById('acceptBy').value.trim(),
+    detail: document.getElementById('requestDetail').value
+  });
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [PW, PH], hotfixes: ['px_scaling'] });
+  pdf.addImage(page.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, PW, PH);
+  return {
+    pdf, moldNo, problem,
+    filename: 'Repair_Request_' + (moldNo || 'Blank') + '.pdf',
+    subject: 'แจ้งซ่อม Mold ' + (moldNo || '-') + (problem ? ' : ' + problem : '')
+  };
+}
+
+// บันทึกไฟล์: ใน claude.ai ใช้ downloads capability, ถ้าเปิดไฟล์เองบนเว็บปกติใช้ pdf.save()
+async function savePDF(r) {
+  let dl = null;
+  try { if (window.claude && window.claude.use) dl = await window.claude.use('downloads'); } catch (e) {}
+  if (dl) await dl.save({ filename: r.filename, data: r.pdf.output('blob') });
+  else r.pdf.save(r.filename);
+}
+
+function reportError(err) {
+  if (err && (err.code === 'declined' || err.name === 'AbortError')) return;
+  console.error(err);
+  alert('เกิดข้อผิดพลาด: ' + (err.message || err));
+}
+
 async function generatePDF() {
   const btn = document.getElementById('submitBtn');
   btn.innerHTML = '⏳ กำลังสร้างเอกสาร โปรดรอ...';
   btn.disabled = true;
-  const reset = () => { btn.innerHTML = '📄 สร้างเอกสาร PDF'; btn.disabled = false; };
+  try { await savePDF(buildPDF()); } catch (err) { reportError(err); }
+  btn.innerHTML = '📄 สร้างเอกสาร PDF';
+  btn.disabled = false;
+}
+
+/* ============ แชร์ / ส่งอีเมล ============ */
+const MAIL_TO = 'mfh2hmj@bosch.com';
+
+function mailParts() {
+  const mold = document.getElementById('moldNo').value.trim();
+  const problem = document.getElementById('problem').value.trim();
+  return {
+    mold, problem,
+    subject: 'แจ้งซ่อม Mold ' + (mold || '-') + (problem ? ' : ' + problem : ''),
+    body: 'เรียนผู้เกี่ยวข้อง\n\nแจ้งซ่อม Mold: ' + (mold || '-') + '\nปัญหา: ' + (problem || '-') + '\n\nแนบไฟล์ PDF ตามเอกสารแนบ'
+  };
+}
+function mailHref() {
+  const m = mailParts();
+  return 'mailto:' + MAIL_TO + '?subject=' + encodeURIComponent(m.subject) + '&body=' + encodeURIComponent(m.body);
+}
+function openMail() {
+  const a = document.createElement('a');
+  a.href = mailHref(); a.target = '_top';
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+async function sharePDF() {
+  const btn = document.getElementById('shareBtn');
+  const hint = document.getElementById('mail-hint');
+  hint.style.display = 'none';
+  btn.disabled = true; btn.innerHTML = '⏳ กำลังเตรียมไฟล์...';
 
   try {
-    const moldNo = document.getElementById('moldNo').value.trim();
-    const page = drawPage({
-      mold: moldNo,
-      problem: document.getElementById('problem').value.trim(),
-      req: document.getElementById('requestBy').value.trim(),
-      acc: document.getElementById('acceptBy').value.trim(),
-      detail: document.getElementById('requestDetail').value
-    });
+    const r = buildPDF();
+    const body = 'ส่งถึง: ' + MAIL_TO + '\n\nแจ้งซ่อม Mold: ' + (r.moldNo || '-') + '\nปัญหา: ' + (r.problem || '-');
+    const file = new File([r.pdf.output('blob')], r.filename, { type: 'application/pdf' });
 
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [PW, PH], hotfixes: ['px_scaling'] });
-    pdf.addImage(page.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, PW, PH);
-    const filename = 'Repair_Request_' + (moldNo || 'Blank') + '.pdf';
-
-    // ใน claude.ai ต้องบันทึกผ่าน downloads capability; ถ้าเปิดไฟล์เองบนเว็บปกติจะใช้ pdf.save()
-    let dl = null;
-    try { if (window.claude && window.claude.use) dl = await window.claude.use('downloads'); } catch (e) {}
-    if (dl) await dl.save({ filename, data: pdf.output('blob') });
-    else pdf.save(filename);
-  } catch (err) {
-    if (!(err && err.code === 'declined')) {
-      console.error(err);
-      alert('เกิดข้อผิดพลาดในการสร้างเอกสาร: ' + (err.message || err));
+    // 1) แชร์ไฟล์ตรงๆ ผ่านเมนูแชร์ของมือถือ (เลือก Mail / Outlook / LINE ได้)
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: r.subject, text: body });
+        return;
+      } catch (err) {
+        if (err && err.name === 'AbortError') return;   // ผู้ใช้กดยกเลิก
+        // ถ้าแชร์ไม่ได้ ให้ใช้วิธีสำรองด้านล่าง
+      }
     }
+
+    // 2) วิธีสำรอง: บันทึก PDF แล้วเปิดอีเมลที่กรอกหัวข้อ/เนื้อหาไว้ให้ (ต้องแนบไฟล์เอง)
+    await savePDF(r);
+    const href = mailHref();
+    hint.innerHTML = 'บันทึกไฟล์ <b>' + r.filename + '</b> แล้ว<br>กดปุ่มด้านล่างเพื่อเปิดอีเมลถึง ' + MAIL_TO + ' แล้วแนบไฟล์ PDF ที่เพิ่งบันทึก<br><a href="' + href + '" target="_top">✉️ เปิดอีเมล</a>';
+    hint.style.display = 'block';
+  } catch (err) {
+    reportError(err);
+  } finally {
+    btn.disabled = false; btn.innerHTML = '📧 แชร์ไฟล์ PDF (แนบไฟล์ส่งเมล)';
   }
-  reset();
 }
 
 refreshUI();
