@@ -48,13 +48,36 @@ input[type=text]:focus, select:focus { border-color:#005691; outline:none; }
 .frame-wrap { border:3px solid #8e2a8e; background:#fff; border-radius:2px; }
 #frame-canvas { display:block; width:100%; height:auto; touch-action:none; cursor:move; }
 .frame-tools { margin-top:8px; display:flex; justify-content:space-between; align-items:center; font-size:12px; color:#888; gap:8px; }
+.mode-row { display:flex; gap:6px; margin:6px 0 8px; }
+.mode-row .mode { flex:1; background:#eef2f7; color:#234; border:2px solid transparent; padding:10px 8px; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; }
+.mode-row .mode.active { background:#005691; color:#fff; border-color:#003a63; }
+.frame-tools .acts { display:flex; gap:4px; flex-wrap:wrap; justify-content:flex-end; }
+
+/* ===== จอคอม: แบ่ง 2 คอลัมน์ ซ้าย = ฟอร์ม+รูป, ขวา = กรอบ PDF ขนาดใหญ่ (ติดหน้าจอตอนเลื่อน) ===== */
+@media (min-width: 960px) {
+  body { padding:24px; }
+  .app-container { max-width:1320px; padding:28px 32px; }
+  .layout { display:grid; grid-template-columns: minmax(400px, 480px) 1fr; gap:32px; align-items:start; }
+  .col-right { position:sticky; top:16px; max-height:calc(100vh - 32px); overflow-y:auto; padding-right:4px; }
+  #frame-panel { display:block !important; margin-top:0 !important; }
+  .col-right label { font-size:15px; }
+  .mode-row .mode { padding:12px; font-size:15px; }
+  .frame-tools { font-size:13px; }
+  .submit-btn { margin-top:18px !important; }
+}
+@media (min-width: 1500px) {
+  .app-container { max-width:1560px; }
+  .layout { grid-template-columns: minmax(420px, 500px) 1fr; }
+}
 </style>
 </head>
 <body>
 
 <div class="app-container">
-  <h2 class="header-title">Repair Detail Sheet</h2>
+  <h2 class="header-title">🛠️ แจ้งซ่อม (Repair Request)</h2>
 
+  <div class="layout">
+  <div class="col-left">
   <div class="form-group">
     <label>Mold No.</label>
     <input type="text" id="moldNo" placeholder="ระบุ Mold No.">
@@ -85,7 +108,7 @@ input[type=text]:focus, select:focus { border-color:#005691; outline:none; }
   <div class="form-group">
     <label>ภาพหน้างาน (ถ่ายรูป & วาดวงกลม)</label>
     <div class="upload-btn-wrapper">
-      <div class="upload-btn">📸 เพิ่มรูป (ถ่ายรูป / เลือกได้หลายรูป)</div>
+      <div class="upload-btn">📸 เพิ่มรูป (ถ่ายรูป / เลือกไฟล์ / ลากไฟล์มาวางได้)</div>
       <input type="file" id="imageLoader" accept="image/*" multiple>
     </div>
     <div class="count-row">
@@ -105,20 +128,33 @@ input[type=text]:focus, select:focus { border-color:#005691; outline:none; }
     <div id="img-empty">ยังไม่มีรูป กดปุ่มด้านบนเพื่อเพิ่มรูป</div>
     <div id="img-list"></div>
 
-    <div id="frame-panel" style="display:none; margin-top:6px;">
-      <label>จัดวางรูปในกรอบ PDF</label>
-      <div class="frame-wrap"><canvas id="frame-canvas"></canvas></div>
-      <div class="frame-tools">
-        <span>แตะรูปเพื่อเลือก · ลากเพื่อย้าย · ลากจุดกลมมุมขวาล่างเพื่อย่อ/ขยาย</span>
-        <button class="mini" type="button" onclick="autoLayout()">🔄 จัดอัตโนมัติ</button>
-      </div>
-    </div>
   </div>
 
+  </div><!-- /col-left -->
+
+  <div class="col-right">
+    <div id="frame-panel" style="display:none; margin-top:6px;">
+      <label>จัดวางรูปในกรอบ PDF</label>
+      <div class="mode-row">
+        <button class="mode active" type="button" data-mode="move">✋ จัดวางรูป</button>
+        <button class="mode" type="button" data-mode="draw">✏️ วาดบนกรอบ</button>
+      </div>
+      <div class="frame-wrap"><canvas id="frame-canvas"></canvas></div>
+      <div class="frame-tools">
+        <span id="frame-hint"></span>
+        <span class="acts">
+          <button class="mini" type="button" onclick="frameUndo()">↶ ย้อน</button>
+          <button class="mini" type="button" onclick="frameClear()">ล้างรอยบนกรอบ</button>
+          <button class="mini" type="button" onclick="autoLayout()">🔄 จัดอัตโนมัติ</button>
+        </span>
+      </div>
+    </div>
   <button class="submit-btn" id="submitBtn" style="margin-top:25px;" onclick="generatePDF()">📄 สร้างเอกสาร PDF</button>
   <button class="share-btn" id="shareBtn" onclick="sharePDF()">📧 แชร์ไฟล์ PDF (แนบไฟล์ส่งเมล)</button>
   <button class="share-btn" style="background:#3a7ab0;" onclick="openMail()">✉️ เปิดอีเมลถึง mfh2hmj@bosch.com</button>
   <div id="mail-hint"></div>
+  </div><!-- /col-right -->
+  </div><!-- /layout -->
 </div>
 
 <script>
@@ -307,6 +343,9 @@ const frameCanvas = document.getElementById('frame-canvas');
 const fctx = frameCanvas.getContext('2d');
 frameCanvas.width = FRAME_W; frameCanvas.height = FRAME_H;
 let layoutManual = false, selected = null, zc = 0, rafPending = false, drag = null;
+let frameMode = 'move';              // 'move' = จัดวางรูป, 'draw' = วาดลูกศร/วงกลม/สี่เหลี่ยมบนกรอบ (ไม่ผูกกับรูป)
+let frameShapes = [], fcur = null, fdrawing = false;
+const FRAME_LINE = 4;
 
 const boxH = it => it.box.w * it.src.height / it.src.width;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -340,13 +379,14 @@ function drawFrameImages(g, preview) {
     const { x, y, w } = it.box, h = boxH(it);
     g.drawImage(it.src, x, y, w, h);
     drawShapes(g, it.shapes, x, y, w, h, Math.max(2.5, LINE_W * (w / it.canvas.width)));
-    if (preview) {
+    if (preview && frameMode === 'move') {
       g.strokeStyle = it === selected ? '#1E6CFF' : '#bbb';
       g.lineWidth = it === selected ? 4 : 1.5;
       g.strokeRect(x, y, w, h);
     }
   });
-  if (preview && selected) {
+  drawShapes(g, fcur ? frameShapes.concat([fcur]) : frameShapes, 0, 0, FRAME_W, FRAME_H, FRAME_LINE);
+  if (preview && frameMode === 'move' && selected) {
     const hx = selected.box.x + selected.box.w, hy = selected.box.y + boxH(selected);
     g.beginPath(); g.arc(hx, hy, 16, 0, Math.PI*2);
     g.fillStyle = '#fff'; g.fill();
@@ -364,6 +404,21 @@ function scheduleFrame() {
   requestAnimationFrame(() => { rafPending = false; drawFrame(); });
 }
 
+function setFrameMode(m) {
+  frameMode = m;
+  fcur = null; fdrawing = false; drag = null;
+  document.querySelectorAll('.mode-row .mode').forEach(b => b.classList.toggle('active', b.dataset.mode === m));
+  frameCanvas.style.cursor = m === 'draw' ? 'crosshair' : 'move';
+  document.getElementById('frame-hint').textContent = m === 'draw'
+    ? 'เลือกเครื่องมือ/สีด้านบน แล้วลากบนกรอบ (รอยวาดบนกรอบไม่ตามรูป ให้จัดรูปให้เสร็จก่อน)'
+    : 'แตะรูปเพื่อเลือก · ลากเพื่อย้าย · ลากจุดกลมมุมขวาล่างเพื่อย่อ/ขยาย';
+  scheduleFrame();
+}
+document.querySelectorAll('.mode-row .mode').forEach(b => b.addEventListener('click', () => setFrameMode(b.dataset.mode)));
+function frameUndo() { frameShapes.pop(); scheduleFrame(); }
+function frameClear() { if (frameShapes.length && !confirm('ลบรอยวาดบนกรอบทั้งหมด?')) return; frameShapes = []; scheduleFrame(); }
+setFrameMode('move');
+
 const fpos = e => {
   const r = frameCanvas.getBoundingClientRect();
   return { x: (e.clientX - r.left) * FRAME_W / r.width, y: (e.clientY - r.top) * FRAME_H / r.height };
@@ -371,6 +426,14 @@ const fpos = e => {
 frameCanvas.addEventListener('pointerdown', e => {
   e.preventDefault();
   const p = fpos(e);
+  if (frameMode === 'draw') {
+    frameCanvas.setPointerCapture(e.pointerId);
+    fdrawing = true;
+    const q = { x: p.x / FRAME_W, y: p.y / FRAME_H };
+    fcur = tool === 'pen' ? { t:'pen', c:color, pts:[q] } : { t:tool, c:color, a:q, b:q };
+    scheduleFrame();
+    return;
+  }
   if (selected) {                                  // จับที่จุดกลมมุมขวาล่าง = ย่อ/ขยาย
     const hx = selected.box.x + selected.box.w, hy = selected.box.y + boxH(selected);
     if (Math.hypot(p.x - hx, p.y - hy) <= 36) {
@@ -390,6 +453,13 @@ frameCanvas.addEventListener('pointerdown', e => {
   scheduleFrame();
 });
 frameCanvas.addEventListener('pointermove', e => {
+  if (fdrawing && fcur) {
+    e.preventDefault();
+    const p = fpos(e), q = { x: clamp(p.x / FRAME_W, 0, 1), y: clamp(p.y / FRAME_H, 0, 1) };
+    if (fcur.t === 'pen') fcur.pts.push(q); else fcur.b = q;
+    scheduleFrame();
+    return;
+  }
   if (!drag) return;
   e.preventDefault();
   const p = fpos(e), it = drag.it, r = it.src.height / it.src.width;
@@ -405,7 +475,15 @@ frameCanvas.addEventListener('pointermove', e => {
   }
   scheduleFrame();
 });
-const endFrameDrag = () => { drag = null; };
+const endFrameDrag = () => {
+  drag = null;
+  if (fdrawing) {
+    fdrawing = false;
+    const s = fcur; fcur = null;
+    if (s && validShape(s)) frameShapes.push(s);
+    scheduleFrame();
+  }
+};
 frameCanvas.addEventListener('pointerup', endFrameDrag);
 frameCanvas.addEventListener('pointercancel', endFrameDrag);
 
@@ -459,7 +537,7 @@ function drawPage(data) {
   // --- กรอบสีม่วง + รูปภาพตามที่จัดวางไว้ ---
   const FX = 27, FY = 160, FW = 864, FH = 535, B = 3;
   const ax = FX + B, ay = FY + B, aw = FW - 2*B, ah = FH - 2*B;
-  if (items.length) {
+  if (items.length || frameShapes.length) {
     g.save();
     g.beginPath(); g.rect(ax, ay, aw, ah); g.clip();
     g.translate(ax, ay);
