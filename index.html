@@ -69,6 +69,11 @@ input[type=text]:focus, select:focus { border-color:#005691; outline:none; }
   .layout { grid-template-columns: minmax(420px, 500px) 1fr; }
 }
 @media (min-width: 960px) { #sendBtn { margin-top:18px !important; } }
+.crop-bar { display:none; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:6px; padding:6px 8px; background:#fff7e0; border:1px solid #f1d98a; border-radius:6px; }
+.crop-bar.on { display:flex; }
+.crop-bar span { flex:1; font-size:12px; color:#6b5a1a; min-width:140px; }
+.zoom-row { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:8px; font-size:13px; color:#555; }
+.zoom-row .mini { padding:8px 12px; font-size:14px; }
 </style>
 </head>
 <body>
@@ -140,6 +145,12 @@ input[type=text]:focus, select:focus { border-color:#005691; outline:none; }
         <button class="mode" type="button" data-mode="draw">✏️ วาดบนกรอบ</button>
       </div>
       <div class="frame-wrap"><canvas id="frame-canvas"></canvas></div>
+      <div class="zoom-row">
+        <span>🔍 ซูมรูปที่เลือก:</span>
+        <button class="mini" type="button" onclick="zoomSel(0.88)">➖</button>
+        <button class="mini" type="button" onclick="zoomSel(1.14)">➕</button>
+        <button class="mini" type="button" onclick="fitSel()">⤢ เต็มกรอบ</button>
+      </div>
       <div class="frame-tools">
         <span id="frame-hint"></span>
         <span class="acts">
@@ -222,14 +233,19 @@ function createItem(src) {
   card.className = 'img-card';
   card.innerHTML =
     '<div class="img-head"><b class="t"></b><span class="btns">' +
+    '<button class="mini" data-act="crop">✂️ ครอบตัด</button>' +
     '<button class="mini" data-act="undo">↶ ย้อน</button>' +
     '<button class="mini" data-act="clear">ล้าง</button>' +
     '<button class="mini danger" data-act="del">ลบรูป</button></span></div>' +
+    '<div class="crop-bar"><span>ลากกรอบ/มุมเพื่อเลือกส่วนที่ต้องการเก็บไว้</span>' +
+    '<button class="mini" data-act="crop-ok" style="background:#2e7d32">✔ ใช้</button>' +
+    '<button class="mini" data-act="crop-reset">เต็มรูป</button>' +
+    '<button class="mini" data-act="crop-cancel">ยกเลิก</button></div>' +
     '<div class="cwrap"><canvas></canvas></div>';
   listEl.appendChild(card);
 
   const canvas = card.querySelector('canvas');
-  const item = { src, shapes: [], current: null, canvas, ctx: canvas.getContext('2d'), title: card.querySelector('.t'), card };
+  const item = { src, orig: src, crop: { x:0, y:0, w:1, h:1 }, cropMode: false, cropRect: null, cropDrag: null, shapes: [], current: null, canvas, ctx: canvas.getContext('2d'), title: card.querySelector('.t'), card };
   canvas.width = card.querySelector('.cwrap').clientWidth || 400;
   canvas.height = Math.round(canvas.width * src.height / src.width);
   items.push(item);
@@ -244,18 +260,21 @@ function createItem(src) {
   let drawing = false;
   const pos = e => { const r = canvas.getBoundingClientRect(); return { x:(e.clientX - r.left)/r.width, y:(e.clientY - r.top)/r.height }; };
   canvas.addEventListener('pointerdown', e => {
+    if (item.cropMode) { e.preventDefault(); canvas.setPointerCapture(e.pointerId); cropDown(item, e); return; }
     e.preventDefault(); canvas.setPointerCapture(e.pointerId); drawing = true;
     const p = pos(e);
     item.current = tool === 'pen' ? { t:'pen', c:color, pts:[p] } : { t:tool, c:color, a:p, b:p };
     render(item);
   });
   canvas.addEventListener('pointermove', e => {
+    if (item.cropMode) { if (item.cropDrag) { e.preventDefault(); cropMove(item, e); } return; }
     if (!drawing) return; e.preventDefault();
     const p = pos(e);
     if (item.current.t === 'pen') item.current.pts.push(p); else item.current.b = p;
     render(item);
   });
   const end = () => {
+    if (item.cropMode) { item.cropDrag = null; return; }
     if (!drawing) return; drawing = false;
     const s = item.current; item.current = null;
     if (s && validShape(s)) item.shapes.push(s);
@@ -267,6 +286,11 @@ function createItem(src) {
   card.addEventListener('click', e => {
     const act = e.target && e.target.dataset && e.target.dataset.act;
     if (!act) return;
+    if (act === 'crop') enterCrop(item);
+    if (act === 'crop-ok') applyCrop(item);
+    if (act === 'crop-cancel') exitCrop(item);
+    if (act === 'crop-reset') { item.cropRect = { x:0, y:0, w:1, h:1 }; render(item); }
+    if (item.cropMode) return;
     if (act === 'undo') { item.shapes.pop(); render(item); }
     if (act === 'clear') { item.shapes = []; item.current = null; render(item); }
     if (act === 'del') {
@@ -294,11 +318,97 @@ function refreshUI() {
 }
 
 function render(it) {
+  if (it.cropMode) { renderCrop(it); return; }
   const c = it.ctx, w = it.canvas.width, h = it.canvas.height;
   c.fillStyle = '#fff'; c.fillRect(0, 0, w, h);
   c.drawImage(it.src, 0, 0, w, h);
   drawShapes(c, it.current ? it.shapes.concat([it.current]) : it.shapes, 0, 0, w, h, LINE_W);
   scheduleFrame();
+}
+
+/* ============ ครอบตัดรูป (Crop) ============ */
+// เก็บรูปต้นฉบับไว้ (orig) จึงครอบใหม่/กลับเป็นเต็มรูปได้เสมอ รอยวาดที่ทำไว้จะถูกย้ายตำแหน่งตามให้อัตโนมัติ
+function enterCrop(it) {
+  it.cropMode = true;
+  it.cropRect = { ...it.crop };
+  it.current = null;
+  it.card.querySelector('.crop-bar').classList.add('on');
+  it.canvas.height = Math.round(it.canvas.width * it.orig.height / it.orig.width);
+  render(it);
+}
+function exitCrop(it) {
+  it.cropMode = false; it.cropDrag = null;
+  it.card.querySelector('.crop-bar').classList.remove('on');
+  it.canvas.height = Math.round(it.canvas.width * it.src.height / it.src.width);
+  render(it);
+}
+function applyCrop(it) {
+  const n = it.cropRect, o = it.crop;
+  if (n.w < 0.04 || n.h < 0.04) { alert('พื้นที่ครอบตัดเล็กเกินไป ลากกรอบให้ใหญ่ขึ้น'); return; }
+  const mp = p => ({ x: (o.x + p.x * o.w - n.x) / n.w, y: (o.y + p.y * o.h - n.y) / n.h });
+  it.shapes.forEach(s => { if (s.pts) s.pts = s.pts.map(mp); if (s.a) s.a = mp(s.a); if (s.b) s.b = mp(s.b); });
+  const ow = it.orig.width, oh = it.orig.height;
+  const cw = Math.max(1, Math.round(ow * n.w)), ch = Math.max(1, Math.round(oh * n.h));
+  const c = document.createElement('canvas');
+  c.width = cw; c.height = ch;
+  c.getContext('2d').drawImage(it.orig, ow * n.x, oh * n.y, ow * n.w, oh * n.h, 0, 0, cw, ch);
+  it.src = c; it.crop = { x:n.x, y:n.y, w:n.w, h:n.h };
+  const r = ch / cw, maxW = Math.min(FRAME_W, FRAME_H / r);
+  it.box.w = Math.min(it.box.w, maxW);
+  fitBox(it);
+  exitCrop(it);
+  if (!layoutManual) autoLayout(); else scheduleFrame();
+}
+function cropPoint(it, e) {
+  const r = it.canvas.getBoundingClientRect(), k = it.canvas.width / r.width;
+  return { x: (e.clientX - r.left) * k, y: (e.clientY - r.top) * k, k };
+}
+function cropDown(it, e) {
+  const p = cropPoint(it, e), W = it.canvas.width, H = it.canvas.height, c = it.cropRect;
+  const x1 = c.x * W, y1 = c.y * H, x2 = (c.x + c.w) * W, y2 = (c.y + c.h) * H;
+  const R = 30 * p.k;                                  // พื้นที่แตะมุม ~30px บนหน้าจอ
+  const corners = [[x1, y1, x2, y2], [x2, y1, x1, y2], [x1, y2, x2, y1], [x2, y2, x1, y1]]; // [มุมที่จับ, มุมตรงข้าม]
+  for (const [cx, cy, fx, fy] of corners) {
+    if (Math.hypot(p.x - cx, p.y - cy) <= R) { it.cropDrag = { mode:'corner', fx: fx / W, fy: fy / H }; return; }
+  }
+  const full = c.w > 0.98 && c.h > 0.98;                // กรอบเต็มรูปอยู่ = ลากข้างในเพื่อวาดกรอบใหม่ (ย้ายไม่ได้อยู่แล้ว)
+  if (!full && p.x >= x1 && p.x <= x2 && p.y >= y1 && p.y <= y2) {
+    it.cropDrag = { mode:'move', ox: p.x / W - c.x, oy: p.y / H - c.y };
+  } else {
+    it.cropDrag = { mode:'corner', fx: clamp(p.x / W, 0, 1), fy: clamp(p.y / H, 0, 1) };
+    it.cropRect = { x: it.cropDrag.fx, y: it.cropDrag.fy, w: 0, h: 0 };
+  }
+}
+function cropMove(it, e) {
+  const p = cropPoint(it, e), W = it.canvas.width, H = it.canvas.height, d = it.cropDrag, c = it.cropRect;
+  const nx = clamp(p.x / W, 0, 1), ny = clamp(p.y / H, 0, 1);
+  if (d.mode === 'move') {
+    c.x = clamp(nx - d.ox, 0, 1 - c.w);
+    c.y = clamp(ny - d.oy, 0, 1 - c.h);
+  } else {
+    c.x = Math.min(nx, d.fx); c.y = Math.min(ny, d.fy);
+    c.w = Math.abs(nx - d.fx); c.h = Math.abs(ny - d.fy);
+  }
+  render(it);
+}
+function renderCrop(it) {
+  const c = it.ctx, W = it.canvas.width, H = it.canvas.height, r = it.cropRect;
+  c.fillStyle = '#fff'; c.fillRect(0, 0, W, H);
+  c.drawImage(it.orig, 0, 0, W, H);
+  const x1 = r.x * W, y1 = r.y * H, x2 = (r.x + r.w) * W, y2 = (r.y + r.h) * H;
+  c.fillStyle = 'rgba(0,0,0,0.55)';
+  c.fillRect(0, 0, W, y1); c.fillRect(0, y2, W, H - y2);
+  c.fillRect(0, y1, x1, y2 - y1); c.fillRect(x2, y1, W - x2, y2 - y1);
+  c.strokeStyle = '#fff'; c.lineWidth = 2; c.strokeRect(x1, y1, x2 - x1, y2 - y1);
+  c.strokeStyle = 'rgba(255,255,255,0.45)'; c.lineWidth = 1;          // เส้นแบ่ง 3 ส่วน
+  for (let i = 1; i < 3; i++) {
+    c.beginPath(); c.moveTo(x1 + (x2 - x1) * i / 3, y1); c.lineTo(x1 + (x2 - x1) * i / 3, y2); c.stroke();
+    c.beginPath(); c.moveTo(x1, y1 + (y2 - y1) * i / 3); c.lineTo(x2, y1 + (y2 - y1) * i / 3); c.stroke();
+  }
+  [[x1, y1], [x2, y1], [x1, y2], [x2, y2]].forEach(([hx, hy]) => {
+    c.fillStyle = '#fff'; c.fillRect(hx - 9, hy - 9, 18, 18);
+    c.strokeStyle = '#1E6CFF'; c.lineWidth = 3; c.strokeRect(hx - 9, hy - 9, 18, 18);
+  });
 }
 
 // วาดรูปทรงทั้งหมด (พิกัดเก็บเป็นสัดส่วน 0-1 ของรูป จึงวาดซ้ำที่ความละเอียดสูงตอนทำ PDF ได้)
@@ -348,6 +458,30 @@ let frameShapes = [], fcur = null, fdrawing = false;
 const FRAME_LINE = 4;
 
 const boxH = it => it.box.w * it.src.height / it.src.width;
+// ขนาดใหญ่สุดที่รูปจะขยายได้ = เต็มกรอบ (ไม่ผูกกับตำแหน่ง); ถ้าขยายแล้วล้นขอบจะดันรูปกลับเข้ามาในกรอบเอง
+const maxBoxW = it => Math.min(FRAME_W, FRAME_H * it.src.width / it.src.height);
+function fitBox(it) {
+  it.box.w = clamp(it.box.w, Math.min(40, maxBoxW(it)), maxBoxW(it));
+  it.box.x = clamp(it.box.x, 0, FRAME_W - it.box.w);
+  it.box.y = clamp(it.box.y, 0, FRAME_H - boxH(it));
+}
+function zoomBox(it, f) {                       // ซูมโดยให้จุดกึ่งกลางรูปอยู่ที่เดิม
+  const cx = it.box.x + it.box.w / 2, cy = it.box.y + boxH(it) / 2;
+  it.box.w *= f;
+  it.box.w = clamp(it.box.w, Math.min(40, maxBoxW(it)), maxBoxW(it));
+  it.box.x = cx - it.box.w / 2; it.box.y = cy - boxH(it) / 2;
+  fitBox(it); layoutManual = true; scheduleFrame();
+}
+function zoomSel(f) {
+  if (!selected) { alert('แตะรูปในกรอบเพื่อเลือกก่อน'); return; }
+  zoomBox(selected, f);
+}
+function fitSel() {
+  if (!selected) { alert('แตะรูปในกรอบเพื่อเลือกก่อน'); return; }
+  const it = selected;
+  it.box.w = maxBoxW(it); it.box.x = (FRAME_W - it.box.w) / 2; it.box.y = (FRAME_H - boxH(it)) / 2;
+  it.z = ++zc; layoutManual = true; scheduleFrame();
+}
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 function gridFor(n) {
@@ -411,7 +545,7 @@ function setFrameMode(m) {
   frameCanvas.style.cursor = m === 'draw' ? 'crosshair' : 'move';
   document.getElementById('frame-hint').textContent = m === 'draw'
     ? 'เลือกเครื่องมือ/สีด้านบน แล้วลากบนกรอบ (รอยวาดบนกรอบไม่ตามรูป ให้จัดรูปให้เสร็จก่อน)'
-    : 'แตะรูปเพื่อเลือก · ลากเพื่อย้าย · ลากจุดกลมมุมขวาล่างเพื่อย่อ/ขยาย';
+    : 'แตะรูปเพื่อเลือก · ลากย้าย · ซูม: ลากจุดกลมมุมขวาล่าง / 2 นิ้วบีบ / ล้อเมาส์ / ปุ่ม ➖➕';
   scheduleFrame();
 }
 document.querySelectorAll('.mode-row .mode').forEach(b => b.addEventListener('click', () => setFrameMode(b.dataset.mode)));
@@ -423,9 +557,19 @@ const fpos = e => {
   const r = frameCanvas.getBoundingClientRect();
   return { x: (e.clientX - r.left) * FRAME_W / r.width, y: (e.clientY - r.top) * FRAME_H / r.height };
 };
+const fpointers = new Map();
+let pinch = null;
 frameCanvas.addEventListener('pointerdown', e => {
   e.preventDefault();
   const p = fpos(e);
+  fpointers.set(e.pointerId, p);
+  if (frameMode === 'move' && fpointers.size === 2 && selected) {      // ใช้ 2 นิ้วบีบ/ถ่าง = ซูมรูปที่เลือก
+    const [a, b] = Array.from(fpointers.values());
+    pinch = { it: selected, d0: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)), w0: selected.box.w,
+              cx: selected.box.x + selected.box.w / 2, cy: selected.box.y + boxH(selected) / 2 };
+    drag = null; layoutManual = true;
+    return;
+  }
   if (frameMode === 'draw') {
     frameCanvas.setPointerCapture(e.pointerId);
     fdrawing = true;
@@ -453,6 +597,19 @@ frameCanvas.addEventListener('pointerdown', e => {
   scheduleFrame();
 });
 frameCanvas.addEventListener('pointermove', e => {
+  if (fpointers.has(e.pointerId)) fpointers.set(e.pointerId, fpos(e));
+  if (pinch) {
+    e.preventDefault();
+    if (fpointers.size >= 2) {
+      const [a, b] = Array.from(fpointers.values());
+      const it = pinch.it;
+      it.box.w = pinch.w0 * Math.hypot(a.x - b.x, a.y - b.y) / pinch.d0;
+      it.box.w = clamp(it.box.w, Math.min(40, maxBoxW(it)), maxBoxW(it));
+      it.box.x = pinch.cx - it.box.w / 2; it.box.y = pinch.cy - boxH(it) / 2;
+      fitBox(it); scheduleFrame();
+    }
+    return;
+  }
   if (fdrawing && fcur) {
     e.preventDefault();
     const p = fpos(e), q = { x: clamp(p.x / FRAME_W, 0, 1), y: clamp(p.y / FRAME_H, 0, 1) };
@@ -470,12 +627,14 @@ frameCanvas.addEventListener('pointermove', e => {
     it.box.y = clamp(drag.y0 + dy, 0, FRAME_H - boxH(it));
   } else {
     const dw = (dx + dy / r) / 2;
-    const maxW = Math.min(FRAME_W - it.box.x, (FRAME_H - it.box.y) / r);
-    it.box.w = clamp(drag.w0 + dw, Math.min(50, maxW), maxW);
+    it.box.w = drag.w0 + dw;
+    fitBox(it);
   }
   scheduleFrame();
 });
-const endFrameDrag = () => {
+const endFrameDrag = e => {
+  if (e && e.pointerId !== undefined) fpointers.delete(e.pointerId);
+  if (fpointers.size < 2) pinch = null;
   drag = null;
   if (fdrawing) {
     fdrawing = false;
@@ -486,6 +645,17 @@ const endFrameDrag = () => {
 };
 frameCanvas.addEventListener('pointerup', endFrameDrag);
 frameCanvas.addEventListener('pointercancel', endFrameDrag);
+// ล้อเมาส์บนรูป = ซูมรูปนั้น (ถ้าเมาส์ไม่ได้อยู่บนรูปใดๆ จะเลื่อนหน้าตามปกติ)
+frameCanvas.addEventListener('wheel', e => {
+  if (frameMode !== 'move') return;
+  const p = fpos(e);
+  const hit = items.slice().sort((a, b) => b.z - a.z).find(it =>
+    p.x >= it.box.x && p.x <= it.box.x + it.box.w && p.y >= it.box.y && p.y <= it.box.y + boxH(it));
+  if (!hit) return;
+  e.preventDefault();
+  selected = hit;
+  zoomBox(hit, Math.exp(-e.deltaY * 0.0015));
+}, { passive: false });
 
 /* ============ วาดหน้า PDF ลง canvas โดยตรง (พิกัดขนาด 1122x792) ============ */
 const logoImg = new Image();
