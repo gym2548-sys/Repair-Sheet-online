@@ -618,7 +618,9 @@ function shapeSites(s) {
 }
 function allSites(list) {
   const out = [];
-  list.forEach(s => shapeSites(s).forEach(q => out.push({ x: q[0], y: q[1] })));
+  list.forEach(s => shapeSites(s).forEach(q => {
+    if (q[0] >= 0 && q[0] <= 1 && q[1] >= 0 && q[1] <= 1) out.push({ x: q[0], y: q[1] });
+  }));
   return out;
 }
 // หาจุดเชื่อมที่ใกล้ที่สุดภายในระยะ thr (หน่วยพิกเซลของ canvas) ไม่พบ = null
@@ -641,6 +643,18 @@ function drawSites(c, list, ox, oy, w, h, snap, r) {
     c.lineWidth = hot ? 2.5 : 1.5; c.strokeStyle = '#1E6CFF'; c.stroke();
   });
   c.restore();
+}
+// รายการรูปทรงที่ลูกศรบนกรอบจะล็อกเข้าหาได้: รูปทรงที่วาดบนกรอบเอง + วงกลม/สี่เหลี่ยมที่วาดไว้บนรูปแต่ละรูป (แปลงเป็นพิกัดบนกรอบตามตำแหน่ง/ขนาดรูปปัจจุบัน)
+function frameSnapShapes() {
+  const out = frameShapes.slice();
+  items.forEach(it => {
+    const h = boxH(it);
+    const m = q => ({ x: (it.box.x + q.x * it.box.w) / FRAME_W, y: (it.box.y + q.y * h) / FRAME_H });
+    it.shapes.forEach(sh => {
+      if (sh.t === 'rect' || sh.t === 'ellipse') out.push({ t: sh.t, a: m(sh.a), b: m(sh.b) });
+    });
+  });
+  return out;
 }
 const snapThr = (cv) => 24 * cv.width / (cv.getBoundingClientRect().width || cv.width);   // ระยะดูด ~24px บนหน้าจอ
 
@@ -764,7 +778,7 @@ function drawFrameImages(g, preview) {
     }
   });
   drawShapes(g, fcur ? frameShapes.concat([fcur]) : frameShapes, 0, 0, FRAME_W, FRAME_H, FRAME_LINE);
-  if (preview && fcur && fcur.t === 'arrow') drawSites(g, frameShapes, 0, 0, FRAME_W, FRAME_H, fsnap, 7);
+  if (preview && fcur && fcur.t === 'arrow') drawSites(g, frameSnapShapes(), 0, 0, FRAME_W, FRAME_H, fsnap, 7);
   if (preview && frameMode === 'move' && selected) {
     const hx = handlePos(selected).x, hy = handlePos(selected).y;
     g.beginPath(); g.arc(hx, hy, 16, 0, Math.PI*2);
@@ -824,7 +838,7 @@ frameCanvas.addEventListener('pointerdown', e => {
     let q = { x: p.x / FRAME_W, y: p.y / FRAME_H };
     fsnap = null;
     if (tool === 'arrow') {
-      const sn = snapSite(frameShapes, q, FRAME_W, FRAME_H, snapThr(frameCanvas));
+      const sn = snapSite(frameSnapShapes(), q, FRAME_W, FRAME_H, snapThr(frameCanvas));
       if (sn) { q = { x: sn.x, y: sn.y }; fsnap = sn; }
     }
     fcur = tool === 'pen' ? { t:'pen', c:color, pts:[q] } : { t:tool, c:color, a:q, b:q };
@@ -868,7 +882,7 @@ frameCanvas.addEventListener('pointermove', e => {
     const p = fpos(e);
     let q = { x: clamp(p.x / FRAME_W, 0, 1), y: clamp(p.y / FRAME_H, 0, 1) };
     if (fcur.t === 'arrow') {
-      const sn = snapSite(frameShapes, q, FRAME_W, FRAME_H, snapThr(frameCanvas));
+      const sn = snapSite(frameSnapShapes(), q, FRAME_W, FRAME_H, snapThr(frameCanvas));
       fsnap = sn;
       if (sn) q = { x: sn.x, y: sn.y };
     }
