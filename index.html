@@ -440,7 +440,12 @@ function createItem(src) {
     if (tf.isTwo()) { drawing = false; item.current = null; item.cropDrag = null; render(item); return; }
     if (item.cropMode) { e.preventDefault(); canvas.setPointerCapture(e.pointerId); cropDown(item, e); return; }
     e.preventDefault(); canvas.setPointerCapture(e.pointerId); drawing = true;
-    const p = pos(e);
+    let p = pos(e);
+    item.snap = null;
+    if (tool === 'arrow') {                       // จุดเริ่มลูกศรล็อกเข้าหารูปทรงที่อยู่ใกล้
+      const sn = snapSite(item.shapes, p, canvas.width, canvas.height, snapThr(canvas));
+      if (sn) { p = { x: sn.x, y: sn.y }; item.snap = sn; }
+    }
     item.current = tool === 'pen' ? { t:'pen', c:color, pts:[p] } : { t:tool, c:color, a:p, b:p };
     render(item);
   });
@@ -448,14 +453,19 @@ function createItem(src) {
     if (tf.isTwo()) return;
     if (item.cropMode) { if (item.cropDrag) { e.preventDefault(); cropMove(item, e); } return; }
     if (!drawing) return; e.preventDefault();
-    const p = pos(e);
+    let p = pos(e);
+    if (item.current.t === 'arrow') {             // ปลายลูกศรล็อกเข้าหาจุดเชื่อมของวงกลม/สี่เหลี่ยม
+      const sn = snapSite(item.shapes, p, canvas.width, canvas.height, snapThr(canvas));
+      item.snap = sn;
+      if (sn) p = { x: sn.x, y: sn.y };
+    }
     if (item.current.t === 'pen') item.current.pts.push(p); else item.current.b = p;
     render(item);
   });
   const end = () => {
     if (item.cropMode) { item.cropDrag = null; return; }
     if (!drawing) return; drawing = false;
-    const s = item.current; item.current = null;
+    const s = item.current; item.current = null; item.snap = null;
     if (s && validShape(s)) item.shapes.push(s);
     render(item);
   };
@@ -503,6 +513,7 @@ function render(it) {
   c.fillStyle = '#fff'; c.fillRect(0, 0, w, h);
   c.drawImage(it.src, 0, 0, w, h);
   drawShapes(c, it.current ? it.shapes.concat([it.current]) : it.shapes, 0, 0, w, h, LINE_W);
+  if (it.current && it.current.t === 'arrow') drawSites(c, it.shapes, 0, 0, w, h, it.snap, 5);
   scheduleFrame();
 }
 
@@ -589,6 +600,50 @@ function renderCrop(it) {
   });
 }
 
+/* ============ ลูกศรล็อกเข้าหาวงกลม/สี่เหลี่ยมอัตโนมัติ (เหมือน PowerPoint) ============ */
+// จุดเชื่อม: สี่เหลี่ยม = กึ่งกลาง 4 ด้าน + 4 มุม, วงกลม/วงรี = 8 จุดรอบเส้นขอบ
+function shapeSites(s) {
+  if (s.t === 'rect') {
+    const x1 = Math.min(s.a.x, s.b.x), x2 = Math.max(s.a.x, s.b.x), y1 = Math.min(s.a.y, s.b.y), y2 = Math.max(s.a.y, s.b.y);
+    const cx = (x1 + x2) / 2, cy = (y1 + y2) / 2;
+    return [[cx, y1], [x2, cy], [cx, y2], [x1, cy], [x1, y1], [x2, y1], [x2, y2], [x1, y2]];
+  }
+  if (s.t === 'ellipse') {
+    const cx = (s.a.x + s.b.x) / 2, cy = (s.a.y + s.b.y) / 2, rx = Math.abs(s.b.x - s.a.x) / 2, ry = Math.abs(s.b.y - s.a.y) / 2;
+    const out = [];
+    for (let k = 0; k < 8; k++) { const t = k * Math.PI / 4; out.push([cx + rx * Math.cos(t), cy + ry * Math.sin(t)]); }
+    return out;
+  }
+  return [];
+}
+function allSites(list) {
+  const out = [];
+  list.forEach(s => shapeSites(s).forEach(q => out.push({ x: q[0], y: q[1] })));
+  return out;
+}
+// หาจุดเชื่อมที่ใกล้ที่สุดภายในระยะ thr (หน่วยพิกเซลของ canvas) ไม่พบ = null
+function snapSite(list, p, W, H, thr) {
+  let best = null, bd = thr;
+  allSites(list).forEach(q => {
+    const d = Math.hypot((q.x - p.x) * W, (q.y - p.y) * H);
+    if (d < bd) { bd = d; best = q; }
+  });
+  return best;
+}
+// แสดงจุดเชื่อมตอนลากลูกศร (จุดที่ล็อกอยู่จะใหญ่และทึบ)
+function drawSites(c, list, ox, oy, w, h, snap, r) {
+  c.save();
+  allSites(list).forEach(q => {
+    const hot = snap && Math.abs(q.x - snap.x) < 1e-9 && Math.abs(q.y - snap.y) < 1e-9;
+    c.beginPath(); c.arc(ox + q.x * w, oy + q.y * h, hot ? r * 1.7 : r, 0, Math.PI * 2);
+    c.fillStyle = hot ? '#1E6CFF' : 'rgba(255,255,255,0.9)';
+    c.fill();
+    c.lineWidth = hot ? 2.5 : 1.5; c.strokeStyle = '#1E6CFF'; c.stroke();
+  });
+  c.restore();
+}
+const snapThr = (cv) => 24 * cv.width / (cv.getBoundingClientRect().width || cv.width);   // ระยะดูด ~24px บนหน้าจอ
+
 // วาดรูปทรงทั้งหมด (พิกัดเก็บเป็นสัดส่วน 0-1 ของรูป จึงวาดซ้ำที่ความละเอียดสูงตอนทำ PDF ได้)
 function drawShapes(c, list, ox, oy, w, h, lw) {
   c.save();
@@ -632,7 +687,7 @@ const fctx = frameCanvas.getContext('2d');
 frameCanvas.width = FRAME_W; frameCanvas.height = FRAME_H;
 let layoutManual = false, selected = null, zc = 0, rafPending = false, drag = null;
 let frameMode = 'move';              // 'move' = จัดวางรูป, 'draw' = วาดลูกศร/วงกลม/สี่เหลี่ยมบนกรอบ (ไม่ผูกกับรูป)
-let frameShapes = [], fcur = null, fdrawing = false;
+let frameShapes = [], fcur = null, fdrawing = false, fsnap = null;
 const FRAME_LINE = 4;
 
 const boxH = it => it.box.w * it.src.height / it.src.width;
@@ -709,6 +764,7 @@ function drawFrameImages(g, preview) {
     }
   });
   drawShapes(g, fcur ? frameShapes.concat([fcur]) : frameShapes, 0, 0, FRAME_W, FRAME_H, FRAME_LINE);
+  if (preview && fcur && fcur.t === 'arrow') drawSites(g, frameShapes, 0, 0, FRAME_W, FRAME_H, fsnap, 7);
   if (preview && frameMode === 'move' && selected) {
     const hx = handlePos(selected).x, hy = handlePos(selected).y;
     g.beginPath(); g.arc(hx, hy, 16, 0, Math.PI*2);
@@ -765,7 +821,12 @@ frameCanvas.addEventListener('pointerdown', e => {
   if (frameMode === 'draw') {
     frameCanvas.setPointerCapture(e.pointerId);
     fdrawing = true;
-    const q = { x: p.x / FRAME_W, y: p.y / FRAME_H };
+    let q = { x: p.x / FRAME_W, y: p.y / FRAME_H };
+    fsnap = null;
+    if (tool === 'arrow') {
+      const sn = snapSite(frameShapes, q, FRAME_W, FRAME_H, snapThr(frameCanvas));
+      if (sn) { q = { x: sn.x, y: sn.y }; fsnap = sn; }
+    }
     fcur = tool === 'pen' ? { t:'pen', c:color, pts:[q] } : { t:tool, c:color, a:q, b:q };
     scheduleFrame();
     return;
@@ -804,7 +865,13 @@ frameCanvas.addEventListener('pointermove', e => {
   }
   if (fdrawing && fcur) {
     e.preventDefault();
-    const p = fpos(e), q = { x: clamp(p.x / FRAME_W, 0, 1), y: clamp(p.y / FRAME_H, 0, 1) };
+    const p = fpos(e);
+    let q = { x: clamp(p.x / FRAME_W, 0, 1), y: clamp(p.y / FRAME_H, 0, 1) };
+    if (fcur.t === 'arrow') {
+      const sn = snapSite(frameShapes, q, FRAME_W, FRAME_H, snapThr(frameCanvas));
+      fsnap = sn;
+      if (sn) q = { x: sn.x, y: sn.y };
+    }
     if (fcur.t === 'pen') fcur.pts.push(q); else fcur.b = q;
     scheduleFrame();
     return;
@@ -831,7 +898,7 @@ const endFrameDrag = e => {
   drag = null;
   if (fdrawing) {
     fdrawing = false;
-    const s = fcur; fcur = null;
+    const s = fcur; fcur = null; fsnap = null;
     if (s && validShape(s)) frameShapes.push(s);
     scheduleFrame();
   }
