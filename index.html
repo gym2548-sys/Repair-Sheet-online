@@ -102,6 +102,67 @@ body::before { content:''; position:fixed; top:0; left:0; right:0; height:6px; b
 #toolbar .dot { width:22px; height:22px; border-width:2px; flex:none; }
 .lockbtn { flex:none; padding:6px 9px; font-size:15px; line-height:1.2; border-radius:8px; }
 @media (max-width:430px) { .lockbtn .lbl { display:none; } }
+
+/* ===== ธีมสีอ่อน + ปุ่มทรงแคปซูล ===== */
+:root { --p:#4361ff; --pd:#2f45d6; --pl:#dfe4ff; --pl2:#f1f3ff; --ink:#1f2a5a; }
+html, body { background:#eef0fb; }
+body { color:var(--ink); }
+i.ic { display:inline-flex; align-items:center; justify-content:center; line-height:1; font-style:normal; }
+.row-2 { display:flex; gap:10px; }
+.row-2 > .form-group { flex:1; min-width:0; }
+label { color:#4a5584; }
+.header-title { color:var(--ink); }
+input[type=text], select { background:var(--pl2); border:2px solid transparent; border-radius:14px; padding:12px 14px; color:var(--ink); }
+input[type=text]:focus, select:focus { border-color:var(--p); background:#fff; }
+.img-card, #frame-panel { background: var(--bosch-bar) top / 100% 5px no-repeat, var(--pl2); border-color:#dfe4ff; border-radius:18px; }
+.cwrap { border-radius:12px; }
+.frame-wrap { border-radius:10px; }
+
+/* ปุ่มหลักแบบแคปซูลมีวงกลมไอคอนท้าย */
+.cta-stack { display:grid; gap:10px; margin-top:16px; }
+.cta { display:flex; align-items:center; justify-content:space-between; gap:12px; width:100%; border:none; border-radius:999px; padding:8px 8px 8px 24px; font-size:16px; font-weight:600; cursor:pointer; font-family:inherit; text-align:left; transition:transform .08s, box-shadow .15s; }
+.cta:active { transform:scale(.985); }
+.cta .bi { flex:none; width:46px; height:46px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:21px; }
+.cta.solid { background:var(--p); color:#fff; box-shadow:0 6px 16px rgba(67,97,255,.3); }
+.cta.solid .bi { background:#fff; color:var(--p); }
+.cta.soft { background:var(--pl); color:var(--p); }
+.cta.soft .bi { background:var(--p); color:#fff; }
+.cta:disabled { background:#e4e6f3; color:#9aa0bd; box-shadow:none; cursor:not-allowed; }
+.cta:disabled .bi { background:#c9cde3; color:#fff; }
+
+/* ปุ่มอัปโหลดรูป */
+.upload-btn-wrapper { border-radius:999px; overflow:hidden; }
+.upload-btn { display:flex; align-items:center; justify-content:space-between; gap:10px; background:var(--pl); border:none; color:var(--p); border-radius:999px; padding:7px 7px 7px 22px; font-size:15px; font-weight:600; text-align:left; }
+.upload-btn .bi { flex:none; width:42px; height:42px; border-radius:50%; background:var(--p); color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:20px; }
+
+/* ปุ่มเล็ก (.mini) = แคปซูลสีอ่อน */
+.mini { display:inline-flex; align-items:center; gap:6px; background:var(--pl); color:var(--p); border:2px solid transparent; border-radius:999px; padding:7px 13px; font-size:13px; font-weight:600; margin:0; cursor:pointer; font-family:inherit; }
+.mini.icon { width:36px; height:36px; padding:0; justify-content:center; font-size:17px; }
+.mini.solid { background:var(--p); color:#fff; }
+.mini.outline { background:#fff; border-color:var(--p); color:var(--p); }
+.mini.link { background:none; color:var(--p); text-decoration:underline; padding:7px 6px; }
+.mini.danger { background:#ffe3e3; color:#d32f2f; }
+.crop-bar { background:#fff8e6; border:none; border-radius:14px; }
+
+/* แถบเครื่องมือ: ไอคอนกลม */
+#toolbar { background: var(--bosch-bar) bottom / 100% 4px no-repeat, #fff; border-radius:999px; padding:6px 12px 10px; }
+#toolbar .tool { width:38px; height:38px; padding:0; border-radius:50%; background:var(--pl); color:var(--p); border:none; display:inline-flex; align-items:center; justify-content:center; font-size:19px; }
+#toolbar .tool.active { background:var(--p); color:#fff; box-shadow:0 3px 10px rgba(67,97,255,.35); }
+#toolbar .dot.on { box-shadow:0 0 0 3px var(--p); }
+.lockbtn { display:inline-flex; align-items:center; gap:4px; background:var(--pl); color:var(--p); border:2px solid transparent; border-radius:999px; padding:7px 12px; font-size:14px; font-weight:600; }
+.lockbtn.on { background:#ff8a3d; color:#fff; }
+
+/* โหมดจัดวาง = ชิปแคปซูล */
+.mode-row .mode { display:inline-flex; align-items:center; justify-content:center; gap:8px; border-radius:999px; background:var(--pl); color:var(--p); border:none; padding:10px 12px; font-weight:600; }
+.mode-row .mode.active { background:var(--p); color:#fff; box-shadow:0 4px 12px rgba(67,97,255,.3); }
+.zoom-row .zl { color:#4a5584; font-weight:600; margin-right:2px; }
+#mail-hint { background:var(--pl2); border:none; border-radius:16px; }
+#mail-hint a { background:var(--p); border-radius:999px; padding:10px 18px; }
+.mini { white-space:nowrap; }
+@media (max-width:600px) {
+  .frame-tools { flex-direction:column; align-items:stretch; }
+  .frame-tools .acts { justify-content:flex-start; align-items:center; }
+}
 </style>
 </head>
 <body>
@@ -111,9 +172,15 @@ body::before { content:''; position:fixed; top:0; left:0; right:0; height:6px; b
 
   <div class="layout">
   <div class="col-left">
-  <div class="form-group">
-    <label>Mold No.</label>
-    <input type="text" id="moldNo" placeholder="ระบุ Mold No.">
+  <div class="row-2">
+    <div class="form-group">
+      <label>Mold No.</label>
+      <input type="text" id="moldNo" placeholder="ระบุ Mold No.">
+    </div>
+    <div class="form-group">
+      <label>Mold Model</label>
+      <input type="text" id="moldModel" placeholder="ระบุ Mold Model">
+    </div>
   </div>
   <div class="form-group">
     <label>Problem (ปัญหา)</label>
@@ -141,7 +208,7 @@ body::before { content:''; position:fixed; top:0; left:0; right:0; height:6px; b
   <div class="form-group">
     <label>ภาพหน้างาน (ถ่ายรูป & วาดวงกลม)</label>
     <div class="upload-btn-wrapper">
-      <div class="upload-btn">📸 เพิ่มรูป (ถ่ายรูป / เลือกไฟล์ / ลากไฟล์มาวางได้)</div>
+      <div class="upload-btn"><span class="bl">เพิ่มรูป (ถ่ายรูป / เลือกไฟล์ / ลากมาวาง)</span><span class="bi"><i class="ic" data-ic="camera"></i></span></div>
       <input type="file" id="imageLoader" accept="image/*" multiple>
     </div>
     <div class="count-row">
@@ -149,15 +216,15 @@ body::before { content:''; position:fixed; top:0; left:0; right:0; height:6px; b
       <span id="img-count">0/8</span>
     </div>
     <div id="toolbar">
-      <button class="tool active" data-tool="ellipse" type="button" title="วงกลม">⭕</button>
-      <button class="tool" data-tool="rect" type="button" title="สี่เหลี่ยม">▭</button>
-      <button class="tool" data-tool="arrow" type="button" title="ลูกศร">➡️</button>
+      <button class="tool active" data-tool="ellipse" type="button" title="วงกลม"><i class="ic" data-ic="circle"></i></button>
+      <button class="tool" data-tool="rect" type="button" title="สี่เหลี่ยม"><i class="ic" data-ic="square"></i></button>
+      <button class="tool" data-tool="arrow" type="button" title="ลูกศร"><i class="ic" data-ic="arrowur"></i></button>
       <span class="sep"></span>
       <span class="dot on" data-col="#E20015" style="background:#E20015" title="แดง"></span>
       <span class="dot" data-col="#FFD400" style="background:#FFD400" title="เหลือง"></span>
       <span class="dot" data-col="#1E6CFF" style="background:#1E6CFF" title="น้ำเงิน"></span>
       <span class="sep"></span>
-      <button class="lockbtn" id="scrollLockBtn" type="button" title="เปิดแล้วลากนิ้วบนรูปเพื่อเลื่อนหน้าได้ (ปิดการวาด/ย้ายชั่วคราว)">🖐<span class="lbl"> เลื่อนหน้า</span></button>
+      <button class="lockbtn" id="scrollLockBtn" type="button" title="เปิดแล้วลากนิ้วบนรูปเพื่อเลื่อนหน้าได้ (ปิดการวาด/ย้ายชั่วคราว)"><i class="ic" data-ic="updown"></i><span class="lbl"> เลื่อนหน้า</span></button>
     </div>
     <div id="img-empty">ยังไม่มีรูป กดปุ่มด้านบนเพื่อเพิ่มรูป</div>
     <div id="img-list"></div>
@@ -170,29 +237,31 @@ body::before { content:''; position:fixed; top:0; left:0; right:0; height:6px; b
     <div id="frame-panel" style="display:none; margin-top:6px;">
       <label>จัดวางรูปในกรอบ PDF</label>
       <div class="mode-row">
-        <button class="mode active" type="button" data-mode="move">✋ จัดวางรูป</button>
-        <button class="mode" type="button" data-mode="draw">✏️ วาดบนกรอบ</button>
+        <button class="mode active" type="button" data-mode="move"><i class="ic" data-ic="move"></i>จัดวางรูป</button>
+        <button class="mode" type="button" data-mode="draw"><i class="ic" data-ic="pen"></i>วาดบนกรอบ</button>
       </div>
       <div class="frame-wrap"><canvas id="frame-canvas"></canvas></div>
       <div class="zoom-row">
-        <span>🔍 ซูมรูปที่เลือก:</span>
-        <button class="mini" type="button" onclick="zoomSel(0.88)">➖</button>
-        <button class="mini" type="button" onclick="zoomSel(1.14)">➕</button>
-        <button class="mini" type="button" onclick="fitSel()">⤢ พอดีกรอบ</button>
-        <button class="mini" type="button" onclick="coverSel()">🔲 คลุมกรอบ</button>
+        <span class="zl">ซูมรูปที่เลือก</span>
+        <button class="mini icon" type="button" title="ย่อ" onclick="zoomSel(0.88)"><i class="ic" data-ic="minus"></i></button>
+        <button class="mini icon" type="button" title="ขยาย" onclick="zoomSel(1.14)"><i class="ic" data-ic="plus"></i></button>
+        <button class="mini outline" type="button" onclick="fitSel()"><i class="ic" data-ic="expand"></i>พอดีกรอบ</button>
+        <button class="mini outline" type="button" onclick="coverSel()"><i class="ic" data-ic="layers"></i>คลุมกรอบ</button>
       </div>
       <div class="frame-tools">
         <span id="frame-hint"></span>
         <span class="acts">
-          <button class="mini" type="button" onclick="frameUndo()">↶ ย้อน</button>
-          <button class="mini" type="button" onclick="frameClear()">ล้างรอยบนกรอบ</button>
-          <button class="mini" type="button" onclick="autoLayout()">🔄 จัดอัตโนมัติ</button>
+          <button class="mini icon" type="button" title="ย้อน" onclick="frameUndo()"><i class="ic" data-ic="undo"></i></button>
+          <button class="mini link" type="button" onclick="frameClear()">ล้างรอยบนกรอบ</button>
+          <button class="mini outline" type="button" onclick="autoLayout()"><i class="ic" data-ic="refresh"></i>จัดอัตโนมัติ</button>
         </span>
       </div>
     </div>
-  <button class="submit-btn" id="sendBtn" style="margin-top:18px;" onclick="sendToDept()">🚀 ส่งเอกสารแจ้งซ่อมเข้าแผนก</button>
-  <button class="share-btn" id="submitBtn" style="background:#5b6b7a;" onclick="generatePDF()">📄 สร้างเอกสาร PDF (ดาวน์โหลด)</button>
-  <button class="share-btn" id="shareBtn" onclick="sharePDF()">📧 แชร์ไฟล์ PDF (แนบไฟล์ส่งเมล)</button>
+  <div class="cta-stack">
+    <button class="cta solid" id="sendBtn" type="button" onclick="sendToDept()"><span class="bl">ส่งเอกสารแจ้งซ่อมเข้าแผนก</span><span class="bi"><i class="ic" data-ic="arrowur"></i></span></button>
+    <button class="cta soft" id="submitBtn" type="button" onclick="generatePDF()"><span class="bl">สร้างเอกสาร PDF (ดาวน์โหลด)</span><span class="bi"><i class="ic" data-ic="download"></i></span></button>
+    <button class="cta soft" id="shareBtn" type="button" onclick="sharePDF()"><span class="bl">แชร์ไฟล์ PDF (แนบไฟล์ส่งเมล)</span><span class="bi"><i class="ic" data-ic="share"></i></span></button>
+  </div>
   <div id="mail-hint"></div>
   </div><!-- /col-right -->
   </div><!-- /layout -->
@@ -206,6 +275,46 @@ const MAX_SIDE = 1600;               // ย่อรูปใหญ่ๆ จา
 let items = [];                      // { src, shapes, current, canvas, ctx, title, card }
 let tool = 'ellipse';
 let color = '#E20015';
+
+/* ============ ไอคอน (SVG เส้นบาง) ============ */
+const ICONS = {
+  circle:'<circle cx="12" cy="12" r="9"/>',
+  square:'<rect x="4" y="5" width="16" height="14" rx="2"/>',
+  arrowur:'<path d="M7 17L17 7M8 7h9v9"/>',
+  updown:'<path d="M12 3v18M8 7l4-4 4 4M8 17l4 4 4-4"/>',
+  camera:'<path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/>',
+  crop:'<path d="M6 2v14a2 2 0 002 2h14M2 6h14a2 2 0 012 2v14"/>',
+  undo:'<path d="M9 14L4 9l5-5"/><path d="M20 20v-7a4 4 0 00-4-4H4"/>',
+  trash:'<path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6M10 11v6M14 11v6"/>',
+  check:'<path d="M20 6L9 17l-5-5"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  minus:'<path d="M5 12h14"/>',
+  expand:'<path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/>',
+  layers:'<path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>',
+  refresh:'<path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.5 9a9 9 0 0114.8-3.4L23 10M1 14l4.7 4.4A9 9 0 0020.5 15"/>',
+  move:'<path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/>',
+  pen:'<path d="M17 3a2.83 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>',
+  download:'<path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
+  share:'<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/>'
+};
+function hydrateIcons(root) {
+  (root || document).querySelectorAll('i.ic[data-ic]').forEach(el => {
+    el.innerHTML = '<svg viewBox="0 0 24 24" width="1.2em" height="1.2em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + (ICONS[el.dataset.ic] || '') + '</svg>';
+    el.removeAttribute('data-ic');
+  });
+}
+// ปุ่มหลักที่มีป้ายข้อความ (.bl): ใช้ตอนกำลังทำงาน
+function setBusy(btn, msg) {
+  const bl = btn.querySelector('.bl');
+  if (bl && !btn.dataset.label) btn.dataset.label = bl.textContent;
+  if (bl) bl.textContent = msg;
+  btn.disabled = true;
+}
+function setIdle(btn) {
+  const bl = btn.querySelector('.bl');
+  if (bl && btn.dataset.label) bl.textContent = btn.dataset.label;
+  btn.disabled = false;
+}
 
 let scrollLock = false;
 (function () {
@@ -298,16 +407,17 @@ function createItem(src) {
   card.className = 'img-card';
   card.innerHTML =
     '<div class="img-head"><b class="t"></b><span class="btns">' +
-    '<button class="mini" data-act="crop">✂️ ครอบตัด</button>' +
-    '<button class="mini" data-act="undo">↶ ย้อน</button>' +
-    '<button class="mini" data-act="clear">ล้าง</button>' +
-    '<button class="mini danger" data-act="del">ลบรูป</button></span></div>' +
+    '<button class="mini" data-act="crop"><i class="ic" data-ic="crop"></i>ครอบตัด</button>' +
+    '<button class="mini icon" data-act="undo" title="ย้อน"><i class="ic" data-ic="undo"></i></button>' +
+    '<button class="mini link" data-act="clear">ล้าง</button>' +
+    '<button class="mini danger icon" data-act="del" title="ลบรูป"><i class="ic" data-ic="trash"></i></button></span></div>' +
     '<div class="crop-bar"><span>ลากกรอบ/มุมเพื่อเลือกส่วนที่ต้องการเก็บไว้</span>' +
-    '<button class="mini" data-act="crop-ok" style="background:#2e7d32">✔ ใช้</button>' +
+    '<button class="mini solid" data-act="crop-ok"><i class="ic" data-ic="check"></i>ใช้</button>' +
     '<button class="mini" data-act="crop-reset">เต็มรูป</button>' +
-    '<button class="mini" data-act="crop-cancel">ยกเลิก</button></div>' +
+    '<button class="mini link" data-act="crop-cancel">ยกเลิก</button></div>' +
     '<div class="cwrap"><canvas></canvas></div>';
   listEl.appendChild(card);
+  hydrateIcons(card);
 
   const canvas = card.querySelector('canvas');
   const item = { src, orig: src, crop: { x:0, y:0, w:1, h:1 }, cropMode: false, cropRect: null, cropDrag: null, shapes: [], current: null, canvas, ctx: canvas.getContext('2d'), title: card.querySelector('.t'), card };
@@ -353,7 +463,8 @@ function createItem(src) {
   canvas.addEventListener('pointercancel', end);
 
   card.addEventListener('click', e => {
-    const act = e.target && e.target.dataset && e.target.dataset.act;
+    const actEl = e.target && e.target.closest ? e.target.closest('[data-act]') : null;
+    const act = actEl && actEl.dataset.act;
     if (!act) return;
     if (act === 'crop') enterCrop(item);
     if (act === 'crop-ok') applyCrop(item);
@@ -775,7 +886,15 @@ function drawPage(data) {
   // --- Mold No / Problem ---
   let w = text('Mold No:', 62, 69, 38, '#000');
   g.fillStyle = '#000'; g.fillRect(62, 80, w, 2);
-  value(data.mold, 62 + w + 10, 69, 16, 32, 740 - (62 + w + 10));
+  value(data.mold, 62 + w + 10, 69, 16, 32, 468 - (62 + w + 10));
+
+  // Mold Model อยู่ระหว่าง Mold No กับ Request by (บรรทัดเดียวกัน)
+  const mmX = 484;
+  const mmW = text('Mold Model:', mmX, 69, 24, '#000');
+  g.fillStyle = '#000'; g.fillRect(mmX, 80, mmW, 2);
+  const mmVX = mmX + mmW + 8;
+  if (data.moldModel) value(data.moldModel, mmVX, 69, 16, 26, 757 - mmVX);
+  else text('.........', mmVX, 69, 16, '#777');
 
   w = text('Problem :', 62, 136, 38, '#7a1f7a');
   g.fillStyle = '#7a1f7a'; g.fillRect(62, 147, w, 2);
@@ -849,6 +968,7 @@ function buildPDF() {
   const problem = document.getElementById('problem').value.trim();
   const page = drawPage({
     mold: moldNo,
+    moldModel: document.getElementById('moldModel').value.trim(),
     problem,
     req: document.getElementById('requestBy').value.trim(),
     acc: document.getElementById('acceptBy').value.trim(),
@@ -880,11 +1000,9 @@ function reportError(err) {
 
 async function generatePDF() {
   const btn = document.getElementById('submitBtn');
-  btn.innerHTML = '⏳ กำลังสร้างเอกสาร โปรดรอ...';
-  btn.disabled = true;
+  setBusy(btn, 'กำลังสร้างเอกสาร โปรดรอ...');
   try { await savePDF(buildPDF()); } catch (err) { reportError(err); }
-  btn.innerHTML = '📄 สร้างเอกสาร PDF';
-  btn.disabled = false;
+  setIdle(btn);
 }
 
 /* ============ แชร์ / ส่งอีเมล ============ */
@@ -913,7 +1031,7 @@ async function sharePDF() {
   const btn = document.getElementById('shareBtn');
   const hint = document.getElementById('mail-hint');
   hint.style.display = 'none';
-  btn.disabled = true; btn.innerHTML = '⏳ กำลังเตรียมไฟล์...';
+  setBusy(btn, 'กำลังเตรียมไฟล์...');
 
   try {
     const r = buildPDF();
@@ -934,12 +1052,12 @@ async function sharePDF() {
     // 2) วิธีสำรอง: บันทึก PDF แล้วเปิดอีเมลที่กรอกหัวข้อ/เนื้อหาไว้ให้ (ต้องแนบไฟล์เอง)
     await savePDF(r);
     const href = mailHref();
-    hint.innerHTML = 'บันทึกไฟล์ <b>' + r.filename + '</b> แล้ว<br>กดปุ่มด้านล่างเพื่อเปิดอีเมลถึง ' + MAIL_TO + ' แล้วแนบไฟล์ PDF ที่เพิ่งบันทึก<br><a href="' + href + '" target="_top">✉️ เปิดอีเมล</a>';
+    hint.innerHTML = 'บันทึกไฟล์ <b>' + r.filename + '</b> แล้ว<br>กดปุ่มด้านล่างเพื่อเปิดอีเมลถึง ' + MAIL_TO + ' แล้วแนบไฟล์ PDF ที่เพิ่งบันทึก<br><a href="' + href + '" target="_top">เปิดอีเมล →</a>';
     hint.style.display = 'block';
   } catch (err) {
     reportError(err);
   } finally {
-    btn.disabled = false; btn.innerHTML = '📧 แชร์ไฟล์ PDF (แนบไฟล์ส่งเมล)';
+    setIdle(btn);
   }
 }
 
@@ -951,6 +1069,7 @@ if (window.claude) document.getElementById('sendBtn').style.display = 'none';
 
 function resetForm() {
   document.getElementById('moldNo').value = '';
+  document.getElementById('moldModel').value = '';
   document.getElementById('problem').value = '';
   items.forEach(it => it.card.remove());
   items = []; selected = null; frameShapes = []; fcur = null; layoutManual = false;
@@ -961,8 +1080,7 @@ function resetForm() {
 
 async function sendToDept() {
   const btn = document.getElementById('sendBtn');
-  btn.innerHTML = '⏳ กำลังส่งข้อมูลเข้าแผนก โปรดรอ...';
-  btn.disabled = true;
+  setBusy(btn, 'กำลังส่งข้อมูลเข้าแผนก โปรดรอ...');
   try {
     const r = buildPDF();
     const reqBy = document.getElementById('requestBy').value.trim();
@@ -972,6 +1090,7 @@ async function sendToDept() {
       body: JSON.stringify({
         base64: r.pdf.output('datauristring'),
         moldNo: r.moldNo,
+        moldModel: document.getElementById('moldModel').value.trim(),
         problem: r.problem,
         reqBy: reqBy,
         filename: r.filename
@@ -985,11 +1104,11 @@ async function sendToDept() {
     console.error(err);
     alert('เกิดข้อผิดพลาดในการส่ง กรุณาลองใหม่\n(ถ้าเปิดจากหน้า claude.ai จะส่งออกนอกเว็บไม่ได้ ต้องเปิดจากไฟล์ที่วางบนเว็บของบริษัท)');
   } finally {
-    btn.innerHTML = '🚀 ส่งเอกสารแจ้งซ่อมเข้าแผนก';
-    btn.disabled = false;
+    setIdle(btn);
   }
 }
 
+hydrateIcons();
 refreshUI();
 </script>
 </body>
