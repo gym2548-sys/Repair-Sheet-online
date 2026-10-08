@@ -509,14 +509,14 @@ function drawPage(data) {
     return g.measureText(t).width;
   };
   // ข้อความที่กรอกแล้วใช้ฟอนต์ใหญ่ ถ้ายาวเกินพื้นที่จะย่อลงอัตโนมัติ (ไม่เล็กกว่า 14px)
-  const value = (v, x, y, emptySize, fillSize, maxW) => {
+  const value = (v, x, y, emptySize, fillSize, maxW, color = '#000') => {
     if (!v) return text(PLACEHOLDER, x, y, emptySize, '#777');
     let size = fillSize;
     for (; size > 14; size--) {
       g.font = size + 'px ' + FONT;
       if (g.measureText(v).width <= maxW) break;
     }
-    return text(v, x, y, size, '#000');
+    return text(v, x, y, size, color);
   };
 
   // --- Mold No / Problem ---
@@ -526,7 +526,7 @@ function drawPage(data) {
 
   w = text('Problem :', 62, 136, 38, '#7a1f7a');
   g.fillStyle = '#7a1f7a'; g.fillRect(62, 147, w, 2);
-  value(data.problem, 62 + w + 10, 136, 16, 32, 1095 - (62 + w + 10));
+  value(data.problem, 62 + w + 10, 136, 16, 32, 1095 - (62 + w + 10), '#7a1f7a');
 
   // --- Request by / Accept by ---
   w = text('Request by:', 765, 51, 20, '#000');
