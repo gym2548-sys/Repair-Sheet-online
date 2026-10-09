@@ -205,6 +205,7 @@ input[type=text]:focus, select:focus { border-color:var(--p); background:#fff; }
       <option value="wgrind">Welding and grinding</option>
       <option value="wire">Wire cut</option>
       <option value="mill">Milling</option>
+      <option value="measure">Measurement</option>
       <option value="modgrind">Ad air vent by grinding</option>
       <option value="modmill">Ad air vent by milling</option>
     </select>
@@ -217,13 +218,14 @@ input[type=text]:focus, select:focus { border-color:var(--p); background:#fff; }
       <input type="file" id="imageLoader" accept="image/*" multiple>
     </div>
     <div class="count-row">
-      <span>* เลือกเครื่องมือด้านบน แล้ววาดทับจุดเสียบนแต่ละรูป</span>
-      <span id="img-count">0/8</span>
+      <span>* เลือกเครื่องมือด้านบนแล้ววาดทับจุดเสีย · เครื่องมือ T แตะบนรูปแล้วพิมพ์ข้อความ</span>
+      <span id="img-count">0/15</span>
     </div>
     <div id="toolbar">
       <button class="tool active" data-tool="ellipse" type="button" title="วงกลม"><i class="ic" data-ic="circle"></i></button>
       <button class="tool" data-tool="rect" type="button" title="สี่เหลี่ยม"><i class="ic" data-ic="square"></i></button>
       <button class="tool" data-tool="arrow" type="button" title="ลูกศร"><i class="ic" data-ic="arrowur"></i></button>
+      <button class="tool" data-tool="text" type="button" title="ข้อความ"><i class="ic" data-ic="text"></i></button>
       <span class="sep"></span>
       <span class="dot on" data-col="#E20015" style="background:#E20015" title="แดง"></span>
       <span class="dot" data-col="#FFD400" style="background:#FFD400" title="เหลือง"></span>
@@ -274,7 +276,7 @@ input[type=text]:focus, select:focus { border-color:var(--p); background:#fff; }
 
 <script>
 /* ============ รูปหลายรูป + เครื่องมือวาด (มือ/วงกลม/สี่เหลี่ยม/ลูกศร) ============ */
-const MAX_IMAGES = 8;
+const MAX_IMAGES = 15;
 const LINE_W = 4;
 const MAX_SIDE = 1600;               // ย่อรูปใหญ่ๆ จากกล้องเพื่อไม่ให้เครื่องช้า/หน่วยความจำเต็ม
 let items = [];                      // { src, shapes, current, canvas, ctx, title, card }
@@ -286,6 +288,7 @@ const ICONS = {
   circle:'<circle cx="12" cy="12" r="9"/>',
   square:'<rect x="4" y="5" width="16" height="14" rx="2"/>',
   arrowur:'<path d="M7 17L17 7M8 7h9v9"/>',
+  text:'<path d="M4 7V4h16v3M9 20h6M12 4v16"/>',
   updown:'<path d="M12 3v18M8 7l4-4 4 4M8 17l4 4 4-4"/>',
   camera:'<path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/>',
   crop:'<path d="M6 2v14a2 2 0 002 2h14M2 6h14a2 2 0 012 2v14"/>',
@@ -402,6 +405,7 @@ function loadFile(f) {
 }
 
 function validShape(s) {
+  if (s.t === 'text') return true;
   if (s.t === 'pen') return s.pts.length >= 1;
   return Math.hypot(s.b.x - s.a.x, s.b.y - s.a.y) > 0.015;
 }
@@ -444,6 +448,7 @@ function createItem(src) {
     if (scrollLock) return;
     if (tf.isTwo()) { drawing = false; item.current = null; item.cropDrag = null; render(item); return; }
     if (item.cropMode) { e.preventDefault(); canvas.setPointerCapture(e.pointerId); cropDown(item, e); return; }
+    if (tool === 'text') { e.preventDefault(); item.textPos = pos(e); return; }
     e.preventDefault(); canvas.setPointerCapture(e.pointerId); drawing = true;
     let p = pos(e);
     item.snap = null;
@@ -468,6 +473,14 @@ function createItem(src) {
     render(item);
   });
   const end = () => {
+    if (item.textPos) {
+      const q = item.textPos; item.textPos = null;
+      setTimeout(() => {
+        const t = prompt('พิมพ์ข้อความ (เช่น P.512):');
+        if (t && t.trim()) { item.shapes.push({ t:'text', c:color, a:q, s:t.trim() }); render(item); }
+      }, 0);
+      return;
+    }
     if (item.cropMode) { item.cropDrag = null; return; }
     if (!drawing) return; drawing = false;
     const s = item.current; item.current = null; item.snap = null;
@@ -669,6 +682,15 @@ function drawShapes(c, list, ox, oy, w, h, lw) {
   c.lineWidth = lw; c.lineCap = 'round'; c.lineJoin = 'round';
   list.forEach(s => {
     c.strokeStyle = s.c; c.fillStyle = s.c;
+    if (s.t === 'text') {                       // ข้อความ: ตัวหนา มีขอบขาวให้อ่านง่ายบนรูป
+      const x = ox + s.a.x*w, y = oy + s.a.y*h, fs = lw * 5;
+      c.font = 'bold ' + fs + 'px ' + FONT; c.textBaseline = 'alphabetic'; c.textAlign = 'left';
+      c.strokeStyle = '#fff'; c.lineWidth = lw * 1.3;
+      c.strokeText(s.s, x, y);
+      c.fillStyle = s.c; c.fillText(s.s, x, y);
+      c.lineWidth = lw;
+      return;
+    }
     if (s.t === 'pen') {
       const p = s.pts;
       c.beginPath();
@@ -706,7 +728,7 @@ const fctx = frameCanvas.getContext('2d');
 frameCanvas.width = FRAME_W; frameCanvas.height = FRAME_H;
 let layoutManual = false, selected = null, zc = 0, rafPending = false, drag = null;
 let frameMode = 'move';              // 'move' = จัดวางรูป, 'draw' = วาดลูกศร/วงกลม/สี่เหลี่ยมบนกรอบ (ไม่ผูกกับรูป)
-let frameShapes = [], fcur = null, fdrawing = false, fsnap = null;
+let frameShapes = [], fcur = null, fdrawing = false, fsnap = null, ftextPos = null;
 const FRAME_LINE = 4;
 
 const boxH = it => it.box.w * it.src.height / it.src.width;
@@ -753,7 +775,9 @@ function gridFor(n) {
   if (n === 3) return [3, 1];
   if (n === 4) return [2, 2];
   if (n <= 6) return [3, 2];
-  return [4, 2];
+  if (n <= 8) return [4, 2];
+  if (n <= 12) return [4, 3];
+  return [5, 3];
 }
 
 function autoLayout() {
@@ -837,6 +861,7 @@ frameCanvas.addEventListener('pointerdown', e => {
     drag = null; layoutManual = true;
     return;
   }
+  if (frameMode === 'draw' && tool === 'text') { ftextPos = { x: p.x / FRAME_W, y: p.y / FRAME_H }; return; }
   if (frameMode === 'draw') {
     frameCanvas.setPointerCapture(e.pointerId);
     fdrawing = true;
@@ -913,6 +938,14 @@ frameCanvas.addEventListener('pointermove', e => {
 });
 const endFrameDrag = e => {
   if (e && e.pointerId !== undefined) fpointers.delete(e.pointerId);
+  if (ftextPos) {
+    const q = ftextPos; ftextPos = null;
+    setTimeout(() => {
+      const t = prompt('พิมพ์ข้อความ:');
+      if (t && t.trim()) { frameShapes.push({ t:'text', c:color, a:q, s:t.trim() }); scheduleFrame(); }
+    }, 0);
+    return;
+  }
   if (fpointers.size < 2) pinch = null;
   drag = null;
   if (fdrawing) {
@@ -1012,7 +1045,7 @@ function drawPage(data) {
 
   const diamond = (cx, cy) => { g.fillStyle = '#000'; g.beginPath(); g.moveTo(cx, cy-4); g.lineTo(cx+4, cy); g.lineTo(cx, cy+4); g.lineTo(cx-4, cy); g.closePath(); g.fill(); };
   diamond(944, 198); text('Repair insert', 956, 203, 13, '#000');
-  diamond(944, 464); text('Modification insert', 956, 469, 13, '#000');
+  diamond(944, 507); text('Modification insert', 956, 512, 13, '#000');
 
   const rows = [
     ['wedm', 'Welding and EDM', 217],
@@ -1021,8 +1054,9 @@ function drawPage(data) {
     ['wgrind', 'Welding and grinding', 334],
     ['wire', 'Wire cut', 371],
     ['mill', 'Milling', 414],
-    ['modgrind', 'Ad air vent by grinding', 498],
-    ['modmill', 'Ad air vent by milling', 546]
+    ['measure', 'Measurement', 457],
+    ['modgrind', 'Ad air vent by grinding', 541],
+    ['modmill', 'Ad air vent by milling', 589]
   ];
   rows.forEach(([key, label, top]) => {
     g.strokeStyle = '#000'; g.lineWidth = 2;
