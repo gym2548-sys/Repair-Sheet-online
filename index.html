@@ -170,6 +170,15 @@ input[type=text]:focus, select:focus { border-color:var(--p); background:#fff; }
 .header-title { font-size:clamp(15px, 4.8vw, 20px); white-space:nowrap; min-width:0; overflow:hidden; text-overflow:ellipsis; }
 #selbar { display:none; position:fixed; left:50%; transform:translateX(-50%); bottom:max(16px, env(safe-area-inset-bottom)); z-index:60; width:max-content; max-width:calc(100vw - 24px); align-items:center; gap:8px; background:#fff; border:1px solid #cfd8e3; border-radius:999px; padding:7px 8px 7px 16px; box-shadow:0 8px 24px rgba(0,40,90,.25); font-size:13px; color:#4a5584; font-weight:600; }
 #selbar .grow { min-width:0; max-width:46vw; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+/* ===== Preview ===== */
+#pv { display:none; position:fixed; inset:0; z-index:100; background:rgba(20,26,60,.72); align-items:center; justify-content:center; padding:max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom)); box-sizing:border-box; }
+#pv.on { display:flex; }
+#pv .pv-box { background:#fff; border-radius:16px; box-shadow:0 12px 40px rgba(0,0,0,.35); width:min(1180px, 100%); max-height:100%; display:flex; flex-direction:column; overflow:hidden; }
+#pv .pv-head { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 10px 8px 18px; border-bottom:1px solid #e3e8ee; font-weight:700; color:var(--ink); }
+#pv .pv-head small { font-weight:500; color:#8a93b8; margin-left:8px; }
+#pv .pv-scroll { overflow:auto; background:#eef0fb; padding:10px; -webkit-overflow-scrolling:touch; }
+#pv img { display:block; width:100%; height:auto; background:#fff; box-shadow:0 2px 10px rgba(0,40,90,.18); cursor:zoom-in; }
+#pv.zoom img { width:220%; max-width:none; cursor:zoom-out; }
 </style>
 </head>
 <body>
@@ -225,7 +234,7 @@ input[type=text]:focus, select:focus { border-color:var(--p); background:#fff; }
       <input type="file" id="imageLoader" accept="image/*" multiple>
     </div>
     <div class="count-row">
-      <span>* เลือกเครื่องมือด้านบนแล้ววาด · T = พิมพ์ข้อความ · ลูกศรชี้ = เลือก/ย้าย/ย่อขยายสิ่งที่วาดไว้</span>
+      <span>* เลือกเครื่องมือด้านบนแล้ววาด · T = พิมพ์ข้อความ · ลูกศรชี้ = เลือก/ย้าย/ย่อขยาย/หมุนสิ่งที่วาดไว้ (จุดกลมด้านบน = หมุน)</span>
       <span id="img-count">0/15</span>
     </div>
     <div id="toolbar">
@@ -243,6 +252,8 @@ input[type=text]:focus, select:focus { border-color:var(--p); background:#fff; }
     </div>
     <div id="selbar">
       <span id="selinfo" class="grow">เลือกอยู่</span>
+      <button class="mini outline icon" id="selRotL" type="button" title="หมุนซ้าย 15°" onclick="rotateSelected(-15)"><i class="ic" data-ic="rotccw"></i></button>
+      <button class="mini outline icon" id="selRotR" type="button" title="หมุนขวา 15°" onclick="rotateSelected(15)"><i class="ic" data-ic="rotcw"></i></button>
       <button class="mini outline" id="selEdit" type="button" onclick="editSelectedText()"><i class="ic" data-ic="pen"></i>แก้ข้อความ</button>
       <button class="mini danger" id="selDel" type="button" onclick="deleteSelected()"><i class="ic" data-ic="trash"></i>ลบ</button>
     </div>
@@ -267,13 +278,17 @@ input[type=text]:focus, select:focus { border-color:var(--p); background:#fff; }
         <button class="mini icon" type="button" title="ขยาย" onclick="zoomSel(1.14)"><i class="ic" data-ic="plus"></i></button>
         <button class="mini outline" type="button" onclick="fitSel()"><i class="ic" data-ic="expand"></i>พอดีกรอบ</button>
         <button class="mini outline" type="button" onclick="coverSel()"><i class="ic" data-ic="layers"></i>คลุมกรอบ</button>
+        <span class="zl" style="margin-left:6px">หมุน</span>
+        <button class="mini icon" type="button" title="หมุนซ้าย 15°" onclick="rotSel(-15)"><i class="ic" data-ic="rotccw"></i></button>
+        <button class="mini icon" type="button" title="หมุนขวา 15°" onclick="rotSel(15)"><i class="ic" data-ic="rotcw"></i></button>
+        <button class="mini link" type="button" onclick="rotSel(0, true)">รีเซ็ตมุม</button>
       </div>
       <div class="frame-tools">
         <span id="frame-hint"></span>
         <span class="acts">
           <button class="mini icon" type="button" title="ย้อน" onclick="frameUndo()"><i class="ic" data-ic="undo"></i></button>
           <button class="mini link" type="button" onclick="frameClear()">ล้างรอยบนกรอบ</button>
-          <button class="mini outline" type="button" onclick="autoLayout()"><i class="ic" data-ic="refresh"></i>จัดอัตโนมัติ</button>
+          <button class="mini outline" type="button" title="ดูตัวอย่างเอกสารก่อนบันทึก" onclick="showPreview()"><i class="ic" data-ic="eye"></i>Preview</button>
         </span>
       </div>
     </div>
@@ -286,6 +301,13 @@ input[type=text]:focus, select:focus { border-color:var(--p); background:#fff; }
   <div id="mail-hint"></div>
   </div><!-- /col-right -->
   </div><!-- /layout -->
+</div>
+
+<div id="pv" onclick="if (event.target === this) closePreview()">
+  <div class="pv-box">
+    <div class="pv-head"><span>Preview<small>แตะรูปเพื่อซูมเข้า/ออก</small></span><button class="mini icon" type="button" title="ปิด" onclick="closePreview()"><i class="ic" data-ic="x"></i></button></div>
+    <div class="pv-scroll"><img id="pv-img" alt="Preview" onclick="document.getElementById('pv').classList.toggle('zoom')"></div>
+  </div>
 </div>
 
 <script>
@@ -319,7 +341,11 @@ const ICONS = {
   pen:'<path d="M17 3a2.83 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>',
   slides:'<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>',
   download:'<path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
-  share:'<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/>'
+  share:'<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/>',
+  eye:'<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
+  rotcw:'<path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/>',
+  rotccw:'<path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/>',
+  x:'<path d="M18 6L6 18M6 6l12 12"/>'
 };
 function hydrateIcons(root) {
   (root || document).querySelectorAll('i.ic[data-ic]').forEach(el => {
@@ -446,17 +472,12 @@ function createItem(src) {
   hydrateIcons(card);
 
   const canvas = card.querySelector('canvas');
-  const item = { src, orig: src, crop: { x:0, y:0, w:1, h:1 }, cropMode: false, cropRect: null, cropDrag: null, shapes: [], current: null, canvas, ctx: canvas.getContext('2d'), title: card.querySelector('.t'), card };
+  const item = { src, rot: 0, orig: src, crop: { x:0, y:0, w:1, h:1 }, cropMode: false, cropRect: null, cropDrag: null, shapes: [], current: null, canvas, ctx: canvas.getContext('2d'), title: card.querySelector('.t'), card };
   canvas.width = card.querySelector('.cwrap').clientWidth || 400;
   canvas.height = Math.round(canvas.width * src.height / src.width);
   items.push(item);
   item.z = ++zc;
-  if (!layoutManual) { refreshUI(); autoLayout(); }
-  else {                                  // จัดเองอยู่แล้ว: วางรูปใหม่เป็นก้อนเล็กเยื้องมุมซ้ายบน ให้ผู้ใช้ลากไปวางเอง
-    const w = Math.min(240, FRAME_W * 0.3), off = ((items.length - 1) * 28) % 140;
-    item.box = { x: 12 + off, y: 12 + off, w };
-    const h = boxH(item); if (item.box.y + h > FRAME_H) item.box.y = Math.max(0, FRAME_H - h);
-  }
+  placeNew(item);
 
   let drawing = false;
   const pos = e => { const r = canvas.getBoundingClientRect(); return { x:(e.clientX - r.left)/r.width, y:(e.clientY - r.top)/r.height }; };
@@ -536,7 +557,7 @@ function createItem(src) {
       if (selected === item) selected = null;
       card.remove();
       refreshUI();
-      if (!layoutManual) autoLayout(); else scheduleFrame();
+      scheduleFrame();
     }
   });
 
@@ -557,7 +578,7 @@ function refreshUI() {
 function render(it) {
   if (it.cropMode) { renderCrop(it); return; }
   const c = it.ctx, w = it.canvas.width, h = it.canvas.height;
-  resolveLinks(it.shapes, false);
+  resolveLinks(it.shapes, false, itemAr(it));
   c.fillStyle = '#fff'; c.fillRect(0, 0, w, h);
   c.drawImage(it.src, 0, 0, w, h);
   drawShapes(c, it.current ? it.shapes.concat([it.current]) : it.shapes, 0, 0, w, h, LINE_W);
@@ -596,7 +617,7 @@ function applyCrop(it) {
   it.src = c; it.crop = { x:n.x, y:n.y, w:n.w, h:n.h };
   fitBox(it);
   exitCrop(it);
-  if (!layoutManual) autoLayout(); else scheduleFrame();
+  scheduleFrame();
 }
 function cropPoint(it, e) {
   const r = it.canvas.getBoundingClientRect(), k = it.canvas.width / r.width;
@@ -652,23 +673,26 @@ function renderCrop(it) {
 
 /* ============ ลูกศรล็อกเข้าหาวงกลม/สี่เหลี่ยมอัตโนมัติ (เหมือน PowerPoint) ============ */
 // จุดเชื่อม: สี่เหลี่ยม = กึ่งกลาง 4 ด้าน + 4 มุม, วงกลม/วงรี = 8 จุดรอบเส้นขอบ
-function shapeSites(s) {
-  if (s.t === 'rect') {
-    const x1 = Math.min(s.a.x, s.b.x), x2 = Math.max(s.a.x, s.b.x), y1 = Math.min(s.a.y, s.b.y), y2 = Math.max(s.a.y, s.b.y);
-    const cx = (x1 + x2) / 2, cy = (y1 + y2) / 2;
-    return [[cx, y1], [x2, cy], [cx, y2], [x1, cy], [x1, y1], [x2, y1], [x2, y2], [x1, y2]];
-  }
-  if (s.t === 'ellipse') {
-    const cx = (s.a.x + s.b.x) / 2, cy = (s.a.y + s.b.y) / 2, rx = Math.abs(s.b.x - s.a.x) / 2, ry = Math.abs(s.b.y - s.a.y) / 2;
-    const out = [];
+function shapeSites(s, ar) {
+  if (s.t !== 'rect' && s.t !== 'ellipse') return [];
+  const x1 = Math.min(s.a.x, s.b.x), x2 = Math.max(s.a.x, s.b.x), y1 = Math.min(s.a.y, s.b.y), y2 = Math.max(s.a.y, s.b.y);
+  const cx = (x1 + x2) / 2, cy = (y1 + y2) / 2;
+  let out;
+  if (s.t === 'rect') out = [[cx, y1], [x2, cy], [cx, y2], [x1, cy], [x1, y1], [x2, y1], [x2, y2], [x1, y2]];
+  else {
+    const rx = (x2 - x1) / 2, ry = (y2 - y1) / 2;
+    out = [];
     for (let k = 0; k < 8; k++) { const t = k * Math.PI / 4; out.push([cx + rx * Math.cos(t), cy + ry * Math.sin(t)]); }
-    return out;
   }
-  return [];
+  if (s.r) {                                             // ar = กว้าง/สูง ของพื้นที่พิกัด 0-1 เพื่อหมุนโดยไม่เบี้ยว
+    const a = ar || 1, co = Math.cos(s.r), si = Math.sin(s.r);
+    out = out.map(q => { const dx = (q[0] - cx) * a, dy = q[1] - cy; return [cx + (dx * co - dy * si) / a, cy + dx * si + dy * co]; });
+  }
+  return out;
 }
-function allSites(list) {
+function allSites(list, ar) {
   const out = [];
-  list.forEach(s => shapeSites(s).forEach((q, k) => {
+  list.forEach(s => shapeSites(s, ar).forEach((q, k) => {
     if (q[0] >= 0 && q[0] <= 1 && q[1] >= 0 && q[1] <= 1) out.push({ x: q[0], y: q[1], sh: s, k });
   }));
   return out;
@@ -676,7 +700,7 @@ function allSites(list) {
 // หาจุดเชื่อมที่ใกล้ที่สุดภายในระยะ thr (หน่วยพิกเซลของ canvas) ไม่พบ = null
 function snapSite(list, p, W, H, thr) {
   let best = null, bd = thr;
-  allSites(list).forEach(q => {
+  allSites(list, W / H).forEach(q => {
     const d = Math.hypot((q.x - p.x) * W, (q.y - p.y) * H);
     if (d < bd) { bd = d; best = q; }
   });
@@ -685,7 +709,7 @@ function snapSite(list, p, W, H, thr) {
 // แสดงจุดเชื่อมตอนลากลูกศร (จุดที่ล็อกอยู่จะใหญ่และทึบ)
 function drawSites(c, list, ox, oy, w, h, snap, r) {
   c.save();
-  allSites(list).forEach(q => {
+  allSites(list, w / h).forEach(q => {
     const hot = snap && Math.abs(q.x - snap.x) < 1e-9 && Math.abs(q.y - snap.y) < 1e-9;
     c.beginPath(); c.arc(ox + q.x * w, oy + q.y * h, hot ? r * 1.7 : r, 0, Math.PI * 2);
     c.fillStyle = hot ? '#1E6CFF' : 'rgba(255,255,255,0.9)';
@@ -694,14 +718,17 @@ function drawSites(c, list, ox, oy, w, h, snap, r) {
   });
   c.restore();
 }
-// รายการรูปทรงที่ลูกศรบนกรอบจะล็อกเข้าหาได้: รูปทรงที่วาดบนกรอบเอง + วงกลม/สี่เหลี่ยมที่วาดไว้บนรูปแต่ละรูป (แปลงเป็นพิกัดบนกรอบตามตำแหน่ง/ขนาดรูปปัจจุบัน)
+// รายการรูปทรงที่ลูกศรบนกรอบจะล็อกเข้าหาได้: รูปทรงที่วาดบนกรอบเอง + วงกลม/สี่เหลี่ยมที่วาดไว้บนรูปแต่ละรูป (แปลงเป็นพิกัดบนกรอบตามตำแหน่ง/ขนาด/การหมุนของรูปปัจจุบัน)
 function frameSnapShapes() {
   const out = frameShapes.slice();
   items.forEach(it => {
     const h = boxH(it);
-    const m = q => ({ x: (it.box.x + q.x * it.box.w) / FRAME_W, y: (it.box.y + q.y * h) / FRAME_H });
     it.shapes.forEach(sh => {
-      if (sh.t === 'rect' || sh.t === 'ellipse') out.push({ t: sh.t, a: m(sh.a), b: m(sh.b), _src: sh, _item: it });
+      if (sh.t !== 'rect' && sh.t !== 'ellipse') return;
+      const hw = Math.abs(sh.b.x - sh.a.x) * it.box.w / 2, hh = Math.abs(sh.b.y - sh.a.y) * h / 2;
+      const c = itemToFrame(it, { x: (sh.a.x + sh.b.x) / 2, y: (sh.a.y + sh.b.y) / 2 });
+      out.push({ t: sh.t, a: { x: c.x - hw / FRAME_W, y: c.y - hh / FRAME_H }, b: { x: c.x + hw / FRAME_W, y: c.y + hh / FRAME_H },
+        r: (sh.r || 0) + (it.rot || 0), _src: sh, _item: it });
     });
   });
   return out;
@@ -718,6 +745,25 @@ const kOf = cv => cv.width / (cv.getBoundingClientRect().width || cv.width);   /
 function renderOwner(o) { if (o === 'frame') scheduleFrame(); else render(o); }
 const measureCtx = document.createElement('canvas').getContext('2d');
 
+/* ----- ตัวช่วยการหมุน (มุมเป็นเรเดียน หมุนตามเข็มนาฬิกา) ----- */
+function rotVec(v, a) { const co = Math.cos(a), si = Math.sin(a); return { x: v.x * co - v.y * si, y: v.x * si + v.y * co }; }
+function rotAround(p, c, a) { const r = rotVec({ x: p.x - c.x, y: p.y - c.y }, a); return { x: c.x + r.x, y: c.y + r.y }; }
+function normAng(a) { a = Math.atan2(Math.sin(a), Math.cos(a)); return Math.abs(a) < 1e-9 ? 0 : a; }
+function snapAng(a) {                                  // ลากใกล้ๆ ทุก 15° จะล็อกมุมให้
+  a = normAng(a);
+  const d = a * 180 / Math.PI, n = Math.round(d / 15) * 15;
+  return Math.abs(d - n) < 4 ? normAng(n * Math.PI / 180) : a;
+}
+const rad2deg = r => (((r * 180 / Math.PI) % 360) + 360) % 360;
+// สัดส่วนกว้าง/สูงของรูป: ใช้หมุนรูปทรงที่เก็บเป็นพิกัด 0-1 ให้ไม่เบี้ยว
+const itemAr = it => it.src.width / it.src.height;
+// พิกัด 0-1 บนรูป -> พิกัด 0-1 บนกรอบ (คิดตำแหน่ง ขนาด และการหมุนของรูป)
+function itemToFrame(it, q) {
+  const h = boxH(it), c = { x: it.box.x + it.box.w / 2, y: it.box.y + h / 2 };
+  let p = { x: it.box.x + q.x * it.box.w, y: it.box.y + q.y * h };
+  if (it.rot) p = rotAround(p, c, it.rot);
+  return { x: p.x / FRAME_W, y: p.y / FRAME_H };
+}
 function textMetrics(s, W, H) {
   const fs = LINE_W * 5 * (s.z || 1);
   measureCtx.font = 'bold ' + fs + 'px ' + FONT;
@@ -729,11 +775,18 @@ function shapeBox(s, W, H) {
   const xs = [s.a.x * W, s.b.x * W], ys = [s.a.y * H, s.b.y * H];
   return { x1: Math.min(...xs), y1: Math.min(...ys), x2: Math.max(...xs), y2: Math.max(...ys) };
 }
-function shapeHandles(s, W, H) {
+function shapeCenter(s, W, H) { const b = shapeBox(s, W, H); return { x: (b.x1 + b.x2) / 2, y: (b.y1 + b.y2) / 2 }; }
+// จุดจับ: ลูกศร = 2 ปลาย · อื่นๆ = มุมย่อขยาย (หมุนตามรูปทรง) + จุดหมุนอยู่เหนือกึ่งกลางด้านบน
+function shapeHandles(s, W, H, k) {
+  k = k || 1;
   if (s.t === 'arrow') return [{ id: 'a', x: s.a.x * W, y: s.a.y * H }, { id: 'b', x: s.b.x * W, y: s.b.y * H }];
-  const b = shapeBox(s, W, H);
-  if (s.t === 'text') return [{ id: 'sc', x: b.x2, y: b.y2 }];
-  return [{ id: 'nw', x: b.x1, y: b.y1 }, { id: 'ne', x: b.x2, y: b.y1 }, { id: 'sw', x: b.x1, y: b.y2 }, { id: 'se', x: b.x2, y: b.y2 }];
+  const b = shapeBox(s, W, H), c = { x: (b.x1 + b.x2) / 2, y: (b.y1 + b.y2) / 2 }, th = s.r || 0;
+  const R = q => (th ? rotAround(q, c, th) : q);
+  const top = R({ x: c.x, y: b.y1 - 4 * k }), rp = R({ x: c.x, y: b.y1 - 30 * k }), m = 14 * k;
+  const out = [{ id: 'rot', x: clamp(rp.x, m, W - m), y: clamp(rp.y, m, H - m), bx: top.x, by: top.y }];
+  if (s.t === 'text') out.push(Object.assign({ id: 'sc' }, R({ x: b.x2, y: b.y2 })));
+  else [['nw', b.x1, b.y1], ['ne', b.x2, b.y1], ['sw', b.x1, b.y2], ['se', b.x2, b.y2]].forEach(([id, x, y]) => out.push(Object.assign({ id }, R({ x, y }))));
+  return out;
 }
 function distSeg(px, py, x1, y1, x2, y2) {
   const dx = x2 - x1, dy = y2 - y1, l2 = dx * dx + dy * dy;
@@ -743,6 +796,7 @@ function distSeg(px, py, x1, y1, x2, y2) {
 }
 function hitBody(s, p, W, H, tol) {
   if (s.t === 'arrow') return distSeg(p.x, p.y, s.a.x * W, s.a.y * H, s.b.x * W, s.b.y * H) <= tol;
+  if (s.r) p = rotAround(p, shapeCenter(s, W, H), -s.r);          // หมุนจุดที่แตะกลับเข้าแกนของรูปทรง
   const b = shapeBox(s, W, H);
   if (s.t === 'text') return p.x >= b.x1 - tol && p.x <= b.x2 + tol && p.y >= b.y1 - tol && p.y <= b.y2 + tol;
   if (s.t === 'rect') {
@@ -767,17 +821,18 @@ function linkOfSite(site) {
   const sh = site.sh;
   return sh._src ? { sh: sh._src, k: site.k, item: sh._item } : { sh, k: site.k };
 }
-function siteXY(sh, k) { const q = shapeSites(sh)[k]; return q ? { x: q[0], y: q[1] } : null; }
-function resolveLinks(list, toFrame) {
+function siteXY(sh, k, ar) { const q = shapeSites(sh, ar)[k]; return q ? { x: q[0], y: q[1] } : null; }
+function resolveLinks(list, toFrame, ar) {
   list.forEach(s => {
     if (s.t !== 'arrow') return;
     ['la', 'lb'].forEach(key => {
       const l = s[key]; if (!l) return;
-      let p = siteXY(l.sh, l.k);
+      const viaItem = toFrame && l.item;
+      let p = siteXY(l.sh, l.k, viaItem ? itemAr(l.item) : ar);
       if (!p) { s[key] = null; return; }
-      if (toFrame && l.item) {
+      if (viaItem) {
         if (!items.includes(l.item)) { s[key] = null; return; }
-        p = { x: (l.item.box.x + p.x * l.item.box.w) / FRAME_W, y: (l.item.box.y + p.y * boxH(l.item)) / FRAME_H };
+        p = itemToFrame(l.item, p);
       }
       if (key === 'la') s.a = p; else s.b = p;
     });
@@ -806,9 +861,16 @@ function refreshSelUI() {
   bar.style.display = selection ? 'flex' : 'none';
   if (!selection) return;
   const names = { rect: 'สี่เหลี่ยม', ellipse: 'วงกลม', arrow: 'ลูกศร', text: 'ข้อความ' };
-  const sh = selection.shape;
-  document.getElementById('selinfo').textContent = 'เลือกอยู่: ' + (names[sh.t] || '') + (sh.t === 'text' ? ' "' + sh.s + '"' : '');
+  const sh = selection.shape, deg = Math.round(rad2deg(sh.r || 0)), canRot = sh.t !== 'arrow';
+  document.getElementById('selinfo').textContent = 'เลือกอยู่: ' + (names[sh.t] || '') + (sh.t === 'text' ? ' "' + sh.s + '"' : '') + (canRot && deg ? ' · ' + deg + '°' : '');
   document.getElementById('selEdit').style.display = sh.t === 'text' ? 'inline-flex' : 'none';
+  document.getElementById('selRotL').style.display = canRot ? 'inline-flex' : 'none';
+  document.getElementById('selRotR').style.display = canRot ? 'inline-flex' : 'none';
+}
+function rotateSelected(deg) {
+  if (!selection || selection.shape.t === 'arrow') return;
+  selection.shape.r = normAng((selection.shape.r || 0) + deg * Math.PI / 180);
+  refreshSelUI(); renderOwner(selection.owner);
 }
 function clearSelection() {
   const prev = selection && selection.owner;
@@ -834,16 +896,22 @@ document.addEventListener('keydown', e => {
 });
 
 function startSelDrag(owner, sh, mode, np, W, H, k) {
-  selDrag = { owner, shape: sh, mode, p0: np, W, H, k, snap: null,
+  selDrag = { owner, shape: sh, mode, p0: np, W, H, k, snap: null, r0: sh.r || 0,
     orig: { a: sh.a ? { x: sh.a.x, y: sh.a.y } : null, b: sh.b ? { x: sh.b.x, y: sh.b.y } : null } };
-  if (sh.t === 'text') { selDrag.w1 = textMetrics({ s: sh.s, a: sh.a, z: 1 }, W, H).w; selDrag.x0 = sh.a.x * W; }
+  const d = selDrag;
+  if (sh.t !== 'arrow') d.c0 = shapeCenter(sh, W, H);
+  if (sh.t === 'text') {
+    d.w1 = textMetrics({ s: sh.s, a: sh.a, z: 1 }, W, H).w; d.x0 = sh.a.x * W;
+    d.A0 = rotAround({ x: sh.a.x * W, y: sh.a.y * H }, d.c0, d.r0);     // ตำแหน่งจริงของจุดเริ่มข้อความ (ตรึงไว้ตอนย่อขยาย)
+  }
+  if (mode === 'rot') d.a0 = Math.atan2(np.y * H - d.c0.y, np.x * W - d.c0.x);
 }
-// แตะ/กดในโหมด "เลือก": จับจุดมุมของรูปทรงที่เลือกอยู่ -> ย่อขยาย, จับตัวรูปทรง -> ย้าย, แตะที่ว่าง -> ยกเลิกการเลือก
+// แตะ/กดในโหมด "เลือก": จับจุดมุม -> ย่อขยาย, จับจุดกลมด้านบน -> หมุน, จับตัวรูปทรง -> ย้าย, แตะที่ว่าง -> ยกเลิกการเลือก
 function selDown(owner, np, k, redraw) {
   const { W, H } = ownerDims(owner), p = { x: np.x * W, y: np.y * H };
   const tol = 11 * k, hr = 18 * k;
   if (selection && selection.owner === owner) {
-    const h = shapeHandles(selection.shape, W, H).find(q => Math.hypot(q.x - p.x, q.y - p.y) <= hr);
+    const h = shapeHandles(selection.shape, W, H, k).find(q => Math.hypot(q.x - p.x, q.y - p.y) <= hr);
     if (h) { startSelDrag(owner, selection.shape, h.id, np, W, H, k); redraw(); return; }
   }
   const list = ownerList(owner);
@@ -875,31 +943,63 @@ function selMove(np) {
     d.snap = sn;
     s[d.mode] = sn ? { x: sn.x, y: sn.y } : { x: np.x, y: np.y };
     s[d.mode === 'a' ? 'la' : 'lb'] = sn ? linkOfSite(sn) : null;
-  } else if (d.mode === 'sc') {
-    s.z = clamp((np.x * W - d.x0) / d.w1, 0.3, 8);
-  } else {                                                 // มุมของวงกลม/สี่เหลี่ยม: ย่อขยายโดยตรึงมุมตรงข้าม
-    const x1 = Math.min(o.a.x, o.b.x), x2 = Math.max(o.a.x, o.b.x), y1 = Math.min(o.a.y, o.b.y), y2 = Math.max(o.a.y, o.b.y);
+  } else if (d.mode === 'rot') {                            // หมุนรอบจุดกึ่งกลาง (ล็อกมุมทุก 15° เมื่อใกล้)
+    s.r = snapAng(d.r0 + Math.atan2(np.y * H - d.c0.y, np.x * W - d.c0.x) - d.a0);
+    refreshSelUI();
+  } else if (d.mode === 'sc') {                             // ย่อขยายข้อความ โดยตรึงจุดเริ่มข้อความไว้ที่เดิม (แม้หมุนอยู่)
+    const L = rotAround({ x: np.x * W, y: np.y * H }, d.c0, -d.r0);
+    const z = clamp((L.x - d.x0) / d.w1, 0.3, 8), fs = LINE_W * 5 * z, w = d.w1 * z;
+    const off = rotVec({ x: -w / 2, y: 0.35 * fs }, d.r0);
+    const c = { x: d.A0.x - off.x, y: d.A0.y - off.y };
+    s.z = z;
+    s.a = { x: (c.x - w / 2) / W, y: (c.y + 0.35 * fs) / H };
+  } else {                                                 // มุมของวงกลม/สี่เหลี่ยม: ย่อขยายโดยตรึงมุมตรงข้าม (คิดในแกนของรูปที่หมุนอยู่)
+    const L = rotAround({ x: np.x * W, y: np.y * H }, d.c0, -d.r0);
+    const x1 = Math.min(o.a.x, o.b.x) * W, x2 = Math.max(o.a.x, o.b.x) * W, y1 = Math.min(o.a.y, o.b.y) * H, y2 = Math.max(o.a.y, o.b.y) * H;
     const fx = d.mode.includes('w') ? x2 : x1, fy = d.mode.includes('n') ? y2 : y1;
-    s.a = { x: Math.min(fx, np.x), y: Math.min(fy, np.y) };
-    s.b = { x: Math.max(fx, np.x), y: Math.max(fy, np.y) };
+    const nx1 = Math.min(fx, L.x), nx2 = Math.max(fx, L.x), ny1 = Math.min(fy, L.y), ny2 = Math.max(fy, L.y);
+    const cw = rotAround({ x: (nx1 + nx2) / 2, y: (ny1 + ny2) / 2 }, d.c0, d.r0), hw = (nx2 - nx1) / 2, hh = (ny2 - ny1) / 2;
+    s.a = { x: (cw.x - hw) / W, y: (cw.y - hh) / H };
+    s.b = { x: (cw.x + hw) / W, y: (cw.y + hh) / H };
   }
 }
 function drawSelection(c, owner, k) {
   if (!selection || selection.owner !== owner) return;
-  const { W, H } = ownerDims(owner), s = selection.shape;
+  const { W, H } = ownerDims(owner), s = selection.shape, th = s.r || 0;
   c.save();
   c.strokeStyle = '#1E6CFF'; c.lineWidth = 1.5 * k;
   if (s.t !== 'arrow') {
-    const b = shapeBox(s, W, H);
+    const b = shapeBox(s, W, H), cx = (b.x1 + b.x2) / 2, cy = (b.y1 + b.y2) / 2;
+    c.save();
+    c.translate(cx, cy); c.rotate(th);
     c.setLineDash([6 * k, 4 * k]);
-    c.strokeRect(b.x1 - 4 * k, b.y1 - 4 * k, b.x2 - b.x1 + 8 * k, b.y2 - b.y1 + 8 * k);
+    c.strokeRect(b.x1 - cx - 4 * k, b.y1 - cy - 4 * k, b.x2 - b.x1 + 8 * k, b.y2 - b.y1 + 8 * k);
     c.setLineDash([]);
+    c.restore();
   }
-  shapeHandles(s, W, H).forEach(h => {
+  const hs = shapeHandles(s, W, H, k);
+  hs.forEach(h => {
+    if (h.id === 'rot') {                                  // จุดหมุน: วงกลมสีน้ำเงิน + ลูกศรวน
+      c.beginPath(); c.moveTo(h.bx, h.by); c.lineTo(h.x, h.y); c.lineWidth = 1.5 * k; c.stroke();
+      c.beginPath(); c.arc(h.x, h.y, 9 * k, 0, Math.PI * 2);
+      c.fillStyle = '#1E6CFF'; c.fill(); c.lineWidth = 2 * k; c.strokeStyle = '#fff'; c.stroke();
+      c.beginPath(); c.arc(h.x, h.y, 4 * k, -0.4 * Math.PI, 1.2 * Math.PI); c.lineWidth = 1.8 * k; c.stroke();
+      c.strokeStyle = '#1E6CFF';
+      return;
+    }
+    c.save();
+    c.translate(h.x, h.y); if (s.t !== 'arrow') c.rotate(th);
     c.beginPath();
-    if (s.t === 'arrow') c.arc(h.x, h.y, 7 * k, 0, Math.PI * 2); else c.rect(h.x - 6 * k, h.y - 6 * k, 12 * k, 12 * k);
+    if (s.t === 'arrow') c.arc(0, 0, 7 * k, 0, Math.PI * 2); else c.rect(-6 * k, -6 * k, 12 * k, 12 * k);
     c.fillStyle = '#fff'; c.fill(); c.lineWidth = 2.5 * k; c.stroke();
+    c.restore();
   });
+  if (selDrag && selDrag.owner === owner && selDrag.mode === 'rot') {   // แสดงองศาตอนหมุน
+    const rh = hs.find(q => q.id === 'rot'), deg = Math.round(rad2deg(th)) + '°';
+    c.font = 'bold ' + (14 * k) + 'px ' + FONT; c.textAlign = 'left'; c.textBaseline = 'middle';
+    c.lineWidth = 4 * k; c.strokeStyle = '#fff'; c.strokeText(deg, rh.x + 14 * k, rh.y);
+    c.fillStyle = '#1E6CFF'; c.fillText(deg, rh.x + 14 * k, rh.y);
+  }
   if (selDrag && selDrag.owner === owner && (selDrag.mode === 'a' || selDrag.mode === 'b')) {
     const cand = (owner === 'frame' ? frameSnapShapes() : owner.shapes).filter(x => x !== s);
     drawSites(c, cand, 0, 0, W, H, selDrag.snap, 5 * k);
@@ -907,7 +1007,7 @@ function drawSelection(c, owner, k) {
   c.restore();
 }
 
-// วาดรูปทรงทั้งหมด (พิกัดเก็บเป็นสัดส่วน 0-1 ของรูป จึงวาดซ้ำที่ความละเอียดสูงตอนทำ PDF ได้)
+// วาดรูปทรงทั้งหมด (พิกัดเก็บเป็นสัดส่วน 0-1 ของรูป จึงวาดซ้ำที่ความละเอียดสูงตอนทำ PDF ได้) · s.r = มุมหมุน (เรเดียน) รอบจุดกึ่งกลางรูปทรง
 function drawShapes(c, list, ox, oy, w, h, lw) {
   c.save();
   c.lineWidth = lw; c.lineCap = 'round'; c.lineJoin = 'round';
@@ -916,10 +1016,12 @@ function drawShapes(c, list, ox, oy, w, h, lw) {
     if (s.t === 'text') {                       // ข้อความ: ตัวหนา มีขอบขาวให้อ่านง่ายบนรูป
       const x = ox + s.a.x*w, y = oy + s.a.y*h, fs = lw * 5 * (s.z || 1);
       c.font = 'bold ' + fs + 'px ' + FONT; c.textBaseline = 'alphabetic'; c.textAlign = 'left';
+      c.save();
+      if (s.r) { const cx = x + c.measureText(s.s).width / 2, cy = y - fs * 0.35; c.translate(cx, cy); c.rotate(s.r); c.translate(-cx, -cy); }
       c.strokeStyle = '#fff'; c.lineWidth = lw * 1.3;
       c.strokeText(s.s, x, y);
       c.fillStyle = s.c; c.fillText(s.s, x, y);
-      c.lineWidth = lw;
+      c.restore();
       return;
     }
     if (s.t === 'pen') {
@@ -932,12 +1034,17 @@ function drawShapes(c, list, ox, oy, w, h, lw) {
       return;
     }
     const x1 = ox + s.a.x*w, y1 = oy + s.a.y*h, x2 = ox + s.b.x*w, y2 = oy + s.b.y*h;
-    if (s.t === 'rect') {
-      c.strokeRect(Math.min(x1, x2), Math.min(y1, y2), Math.abs(x2 - x1), Math.abs(y2 - y1));
-    } else if (s.t === 'ellipse') {
-      c.beginPath();
-      c.ellipse((x1 + x2)/2, (y1 + y2)/2, Math.abs(x2 - x1)/2, Math.abs(y2 - y1)/2, 0, 0, Math.PI*2);
-      c.stroke();
+    if (s.t === 'rect' || s.t === 'ellipse') {
+      c.save();
+      if (s.r) { const cx = (x1 + x2) / 2, cy = (y1 + y2) / 2; c.translate(cx, cy); c.rotate(s.r); c.translate(-cx, -cy); }
+      if (s.t === 'rect') {
+        c.strokeRect(Math.min(x1, x2), Math.min(y1, y2), Math.abs(x2 - x1), Math.abs(y2 - y1));
+      } else {
+        c.beginPath();
+        c.ellipse((x1 + x2)/2, (y1 + y2)/2, Math.abs(x2 - x1)/2, Math.abs(y2 - y1)/2, 0, 0, Math.PI*2);
+        c.stroke();
+      }
+      c.restore();
     } else if (s.t === 'arrow') {
       const ang = Math.atan2(y2 - y1, x2 - x1), hl = lw*4 + 8;
       c.beginPath(); c.moveTo(x1, y1);
@@ -957,7 +1064,7 @@ const FRAME_W = 858, FRAME_H = 529;     // พื้นที่ภายใน�
 const frameCanvas = document.getElementById('frame-canvas');
 const fctx = frameCanvas.getContext('2d');
 frameCanvas.width = FRAME_W; frameCanvas.height = FRAME_H;
-let layoutManual = false, selected = null, zc = 0, rafPending = false, drag = null;
+let selected = null, zc = 0, rafPending = false, drag = null;
 let frameMode = 'move';              // 'move' = จัดวางรูป, 'draw' = วาดลูกศร/วงกลม/สี่เหลี่ยมบนกรอบ (ไม่ผูกกับรูป)
 let frameShapes = [], fcur = null, fdrawing = false, fsnap = null, ftextPos = null, fsnapLink = null;
 const FRAME_LINE = 4;
@@ -968,7 +1075,10 @@ const containW = it => Math.min(FRAME_W, FRAME_H * it.src.width / it.src.height)
 const coverW = it => Math.max(FRAME_W, FRAME_H * it.src.width / it.src.height);     // คลุมเต็มกรอบ (อาจล้นด้านหนึ่ง)
 const maxBoxW = it => coverW(it) * 4;               // ซูมได้ถึง 4 เท่า ส่วนที่ล้นกรอบจะถูกตัดออกตอนทำ PDF
 const MIN_VISIBLE = 60;                             // ต้องมีรูปโผล่ในกรอบอย่างน้อยเท่านี้ จะได้ไม่ลากหายไปนอกกรอบ
-const handlePos = it => ({ x: clamp(it.box.x + it.box.w, 24, FRAME_W - 24), y: clamp(it.box.y + boxH(it), 24, FRAME_H - 24) });
+const handlePos = it => {
+  const q = rotAround({ x: it.box.x + it.box.w, y: it.box.y + boxH(it) }, itemCenter(it), it.rot || 0);
+  return { x: clamp(q.x, 24, FRAME_W - 24), y: clamp(q.y, 24, FRAME_H - 24) };
+};
 function fitBox(it) {
   it.box.w = clamp(it.box.w, 40, maxBoxW(it));
   const h = boxH(it), vx = Math.min(MIN_VISIBLE, it.box.w), vy = Math.min(MIN_VISIBLE, h);
@@ -980,7 +1090,7 @@ function zoomBox(it, f) {                       // ซูมโดยให้�
   it.box.w *= f;
   it.box.w = clamp(it.box.w, 40, maxBoxW(it));
   it.box.x = cx - it.box.w / 2; it.box.y = cy - boxH(it) / 2;
-  fitBox(it); layoutManual = true; scheduleFrame();
+  fitBox(it); scheduleFrame();
 }
 function zoomSel(f) {
   if (!selected) { alert('แตะรูปในกรอบเพื่อเลือกก่อน'); return; }
@@ -989,48 +1099,61 @@ function zoomSel(f) {
 function fitSel() {
   if (!selected) { alert('แตะรูปในกรอบเพื่อเลือกก่อน'); return; }
   const it = selected;
-  it.box.w = containW(it); it.box.x = (FRAME_W - it.box.w) / 2; it.box.y = (FRAME_H - boxH(it)) / 2;
-  it.z = ++zc; layoutManual = true; scheduleFrame();
+  it.box.w = rotFit(it, false); it.box.x = (FRAME_W - it.box.w) / 2; it.box.y = (FRAME_H - boxH(it)) / 2;
+  it.z = ++zc; scheduleFrame();
 }
 function coverSel() {                           // ขยายให้คลุมเต็มกรอบพอดี (ไม่เหลือที่ว่าง ส่วนเกินถูกตัด)
   if (!selected) { alert('แตะรูปในกรอบเพื่อเลือกก่อน'); return; }
   const it = selected;
-  it.box.w = coverW(it); it.box.x = (FRAME_W - it.box.w) / 2; it.box.y = (FRAME_H - boxH(it)) / 2;
-  it.z = ++zc; layoutManual = true; scheduleFrame();
+  it.box.w = rotFit(it, true); it.box.x = (FRAME_W - it.box.w) / 2; it.box.y = (FRAME_H - boxH(it)) / 2;
+  it.z = ++zc; scheduleFrame();
 }
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
-function gridFor(n) {
-  if (n <= 1) return [1, 1];
-  if (n === 2) return [2, 1];
-  if (n === 3) return [3, 1];
-  if (n === 4) return [2, 2];
-  if (n <= 6) return [3, 2];
-  if (n <= 8) return [4, 2];
-  if (n <= 12) return [4, 3];
-  return [5, 3];
+// วางรูปใหม่ลงกรอบ (ไม่มีการจัดอัตโนมัติ): รูปแรกพอดีกรอบ รูปถัดไปวางซ้อนเยื้องมุมซ้ายบน ให้ผู้ใช้ลากจัดเอง
+function placeNew(it) {
+  const r = it.src.height / it.src.width;
+  if (items.length <= 1) {
+    const w = containW(it);
+    it.box = { x: (FRAME_W - w) / 2, y: (FRAME_H - w * r) / 2, w };
+    return;
+  }
+  const w = Math.min(FRAME_W * 0.45, FRAME_H * 0.6 / r), off = ((items.length - 2) * 32) % 192;
+  it.box = { x: 14 + off, y: 14 + off, w };
+  fitBox(it);
 }
 
-function autoLayout() {
-  const n = items.length;
-  layoutManual = false;
-  if (!n) return;
-  const [cols, rows] = gridFor(n), gap = 6;
-  const cw = (FRAME_W - gap*(cols-1)) / cols, ch = (FRAME_H - gap*(rows-1)) / rows;
-  items.forEach((it, i) => {
-    const r = it.src.height / it.src.width;
-    const w = Math.min(cw, ch / r);
-    it.box = { x: (i % cols)*(cw + gap) + (cw - w)/2, y: Math.floor(i / cols)*(ch + gap) + (ch - w*r)/2, w };
-  });
+/* ----- หมุนรูปในกรอบ ----- */
+const itemCenter = it => ({ x: it.box.x + it.box.w / 2, y: it.box.y + boxH(it) / 2 });
+// แตะโดนรูปที่หมุนอยู่หรือไม่ (หมุนจุดที่แตะกลับเข้าแกนของรูปก่อนเทียบ)
+const hitItem = (it, p) => {
+  const q = it.rot ? rotAround(p, itemCenter(it), -it.rot) : p;
+  return q.x >= it.box.x && q.x <= it.box.x + it.box.w && q.y >= it.box.y && q.y <= it.box.y + boxH(it);
+};
+const rotHandlePos = it => {
+  const c = itemCenter(it), q = rotAround({ x: c.x, y: it.box.y - 36 }, c, it.rot || 0);
+  return { x: clamp(q.x, 24, FRAME_W - 24), y: clamp(q.y, 24, FRAME_H - 24) };
+};
+// ความกว้างที่ทำให้รูป (ที่หมุนอยู่) พอดีกรอบ / คลุมเต็มกรอบ
+function rotFit(it, cover) {
+  const th = it.rot || 0, co = Math.abs(Math.cos(th)), si = Math.abs(Math.sin(th)), r = it.src.height / it.src.width;
+  if (cover) return Math.max(FRAME_W * co + FRAME_H * si, (FRAME_W * si + FRAME_H * co) / r);
+  return Math.min(FRAME_W / (co + r * si), FRAME_H / (si + r * co));
+}
+function rotSel(deg, reset) {
+  if (!selected) { alert('แตะรูปในกรอบเพื่อเลือกก่อน'); return; }
+  selected.rot = reset ? 0 : normAng((selected.rot || 0) + deg * Math.PI / 180);
   scheduleFrame();
 }
 
 // วาดรูป+รอยวาดทั้งหมดตามตำแหน่งที่จัดไว้ (ใช้ทั้งหน้าตัวอย่างและ PDF)
 function drawFrameImages(g, preview) {
-  items.forEach(it => resolveLinks(it.shapes, false));
-  resolveLinks(frameShapes, true);
+  items.forEach(it => resolveLinks(it.shapes, false, itemAr(it)));
+  resolveLinks(frameShapes, true, FRAME_W / FRAME_H);
   items.slice().sort((a, b) => a.z - b.z).forEach(it => {
-    const { x, y, w } = it.box, h = boxH(it);
+    const { x, y, w } = it.box, h = boxH(it), rot = it.rot || 0;
+    g.save();
+    if (rot) { const cx = x + w / 2, cy = y + h / 2; g.translate(cx, cy); g.rotate(rot); g.translate(-cx, -cy); }
     g.drawImage(it.src, x, y, w, h);
     drawShapes(g, it.shapes, x, y, w, h, Math.max(2.5, LINE_W * (w / it.canvas.width)));
     if (preview && frameMode === 'move') {
@@ -1038,14 +1161,30 @@ function drawFrameImages(g, preview) {
       g.lineWidth = it === selected ? 4 : 1.5;
       g.strokeRect(x, y, w, h);
     }
+    g.restore();
   });
   drawShapes(g, fcur ? frameShapes.concat([fcur]) : frameShapes, 0, 0, FRAME_W, FRAME_H, FRAME_LINE);
   if (preview && fcur && fcur.t === 'arrow') drawSites(g, frameSnapShapes(), 0, 0, FRAME_W, FRAME_H, fsnap, 7);
   if (preview && frameMode === 'move' && selected) {
-    const hx = handlePos(selected).x, hy = handlePos(selected).y;
-    g.beginPath(); g.arc(hx, hy, 16, 0, Math.PI*2);
+    const it = selected, c = itemCenter(it), top = rotAround({ x: c.x, y: it.box.y }, c, it.rot || 0);
+    const hp = handlePos(it), rp = rotHandlePos(it);
+    g.save();
+    g.beginPath(); g.moveTo(top.x, top.y); g.lineTo(rp.x, rp.y);          // เส้นต่อไปยังจุดหมุน
+    g.lineWidth = 3; g.strokeStyle = '#1E6CFF'; g.stroke();
+    g.beginPath(); g.arc(hp.x, hp.y, 16, 0, Math.PI*2);                  // จุดย่อ/ขยาย
     g.fillStyle = '#fff'; g.fill();
     g.lineWidth = 4; g.strokeStyle = '#1E6CFF'; g.stroke();
+    g.beginPath(); g.arc(rp.x, rp.y, 16, 0, Math.PI*2);                  // จุดหมุน
+    g.fillStyle = '#1E6CFF'; g.fill();
+    g.lineWidth = 3; g.strokeStyle = '#fff'; g.stroke();
+    g.beginPath(); g.arc(rp.x, rp.y, 7, -0.4 * Math.PI, 1.2 * Math.PI); g.stroke();
+    if (drag && drag.mode === 'rotate' && drag.it === it) {              // แสดงองศาตอนหมุน
+      const deg = Math.round(rad2deg(it.rot || 0)) + '°';
+      g.font = 'bold 22px ' + FONT; g.textAlign = 'left'; g.textBaseline = 'middle';
+      g.lineWidth = 5; g.strokeStyle = '#fff'; g.strokeText(deg, rp.x + 22, rp.y);
+      g.fillStyle = '#1E6CFF'; g.fillText(deg, rp.x + 22, rp.y);
+    }
+    g.restore();
   }
 }
 
@@ -1068,7 +1207,7 @@ function setFrameMode(m) {
   frameCanvas.style.cursor = m === 'draw' ? 'crosshair' : 'move';
   document.getElementById('frame-hint').textContent = m === 'draw'
     ? 'เลือกเครื่องมือ/สีด้านบน แล้วลากบนกรอบ (รอยวาดบนกรอบไม่ตามรูป ให้จัดรูปให้เสร็จก่อน)'
-    : 'แตะรูปเพื่อเลือก · ลากย้าย · ซูมเกินกรอบได้ (ส่วนที่ล้นถูกตัดใน PDF): ลากจุดกลม / 2 นิ้วบีบ / ล้อเมาส์ / ปุ่ม ➖➕ · 2 นิ้วลากเมื่อไม่ได้เลือกรูป = เลื่อนหน้า';
+    : 'แตะรูปเพื่อเลือก · ลากย้าย · จุดกลมมุมล่างขวา = ย่อ/ขยาย · จุดกลมสีน้ำเงินด้านบน = หมุน · 2 นิ้วบีบ / ล้อเมาส์ = ซูม (ส่วนที่ล้นกรอบถูกตัดใน PDF) · 2 นิ้วลากเมื่อไม่ได้เลือกรูป = เลื่อนหน้า';
   scheduleFrame();
 }
 document.querySelectorAll('.mode-row .mode').forEach(b => b.addEventListener('click', () => setFrameMode(b.dataset.mode)));
@@ -1093,7 +1232,7 @@ frameCanvas.addEventListener('pointerdown', e => {
     const [a, b] = Array.from(fpointers.values());
     pinch = { it: selected, d0: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)), w0: selected.box.w,
               cx: selected.box.x + selected.box.w / 2, cy: selected.box.y + boxH(selected) / 2 };
-    drag = null; layoutManual = true;
+    drag = null;
     return;
   }
   if (frameMode === 'draw' && tool === 'select') {
@@ -1117,16 +1256,20 @@ frameCanvas.addEventListener('pointerdown', e => {
     scheduleFrame();
     return;
   }
-  if (selected) {                                  // จับที่จุดกลมมุมขวาล่าง = ย่อ/ขยาย
-    const hx = handlePos(selected).x, hy = handlePos(selected).y;
-    if (Math.hypot(p.x - hx, p.y - hy) <= 36) {
-      drag = { mode:'resize', it:selected, sx:p.x, sy:p.y, w0:selected.box.w };
+  if (selected) {                                  // จุดกลมมุมขวาล่าง = ย่อ/ขยาย · จุดกลมด้านบน = หมุน
+    const it = selected, hp = handlePos(it), rp = rotHandlePos(it), c = itemCenter(it), th = it.rot || 0;
+    if (Math.hypot(p.x - hp.x, p.y - hp.y) <= 36) {
+      drag = { mode:'resize', it, sx:p.x, sy:p.y, w0:it.box.w, th, tlw: rotAround({ x:it.box.x, y:it.box.y }, c, th) };
+      frameCanvas.setPointerCapture(e.pointerId);
+      return;
+    }
+    if (Math.hypot(p.x - rp.x, p.y - rp.y) <= 36) {
+      drag = { mode:'rotate', it, cx:c.x, cy:c.y, a0:Math.atan2(p.y - c.y, p.x - c.x), r0:th };
       frameCanvas.setPointerCapture(e.pointerId);
       return;
     }
   }
-  const hit = items.slice().sort((a, b) => b.z - a.z).find(it =>
-    p.x >= it.box.x && p.x <= it.box.x + it.box.w && p.y >= it.box.y && p.y <= it.box.y + boxH(it));
+  const hit = items.slice().sort((a, b) => b.z - a.z).find(it => hitItem(it, p));
   selected = hit || null;
   if (hit) {
     hit.z = ++zc;
@@ -1168,14 +1311,19 @@ frameCanvas.addEventListener('pointermove', e => {
   e.preventDefault();
   const p = fpos(e), it = drag.it, r = it.src.height / it.src.width;
   const dx = p.x - drag.sx, dy = p.y - drag.sy;
-  if (Math.abs(dx) + Math.abs(dy) > 2) layoutManual = true;
-  if (drag.mode === 'move') {
+  if (drag.mode === 'rotate') {
+    it.rot = snapAng(drag.r0 + Math.atan2(p.y - drag.cy, p.x - drag.cx) - drag.a0);
+  } else if (drag.mode === 'move') {
     it.box.x = drag.x0 + dx;
     it.box.y = drag.y0 + dy;
     fitBox(it);
   } else {
-    const dw = (dx + dy / r) / 2;
-    it.box.w = drag.w0 + dw;
+    const dl = rotVec({ x: dx, y: dy }, -drag.th);               // ระยะลากในแกนของรูปที่หมุนอยู่
+    const w = clamp(drag.w0 + (dl.x + dl.y / r) / 2, 40, maxBoxW(it)), h = w * r;
+    const c = rotVec({ x: w / 2, y: h / 2 }, drag.th);            // ตรึงมุมซ้ายบนของรูปไว้ที่เดิม
+    it.box.w = w;
+    it.box.x = drag.tlw.x + c.x - w / 2;
+    it.box.y = drag.tlw.y + c.y - h / 2;
     fitBox(it);
   }
   scheduleFrame();
@@ -1206,8 +1354,7 @@ frameCanvas.addEventListener('pointercancel', endFrameDrag);
 frameCanvas.addEventListener('wheel', e => {
   if (frameMode !== 'move') return;
   const p = fpos(e);
-  const hit = items.slice().sort((a, b) => b.z - a.z).find(it =>
-    p.x >= it.box.x && p.x <= it.box.x + it.box.w && p.y >= it.box.y && p.y <= it.box.y + boxH(it));
+  const hit = items.slice().sort((a, b) => b.z - a.z).find(it => hitItem(it, p));
   if (!hit) return;
   e.preventDefault();
   selected = hit;
@@ -1336,18 +1483,36 @@ function drawPage(data) {
   return pc;
 }
 
-function buildPDF() {
-  const moldNo = document.getElementById('moldNo').value.trim();
-  const problem = document.getElementById('problem').value.trim();
-  const page = drawPage({
-    mold: moldNo,
+function pageData() {
+  return {
+    mold: document.getElementById('moldNo').value.trim(),
     moldModel: document.getElementById('moldModel').value.trim(),
-    problem,
+    problem: document.getElementById('problem').value.trim(),
     req: document.getElementById('requestBy').value.trim(),
     acc: document.getElementById('acceptBy').value.trim(),
     detail: document.getElementById('requestDetail').value,
     drawingIndex: document.getElementById('drawingIndex').value.trim()
-  });
+  };
+}
+
+/* ============ Preview: ดูหน้าเอกสารจริงก่อนบันทึก/ส่ง ============ */
+function showPreview() {
+  const pv = document.getElementById('pv');
+  try { document.getElementById('pv-img').src = drawPage(pageData()).toDataURL('image/jpeg', 0.92); }
+  catch (err) { reportError(err); return; }
+  pv.classList.remove('zoom'); pv.classList.add('on');
+  document.body.style.overflow = 'hidden';
+}
+function closePreview() {
+  document.getElementById('pv').classList.remove('on');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closePreview(); });
+
+function buildPDF() {
+  const moldNo = document.getElementById('moldNo').value.trim();
+  const problem = document.getElementById('problem').value.trim();
+  const page = drawPage(pageData());
   const { jsPDF } = window.jspdf;
   const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [PW, PH], hotfixes: ['px_scaling'] });
   pdf.addImage(page.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, PW, PH);
@@ -1438,7 +1603,7 @@ async function buildPPTX() {
       x: pxIn(x), y: pxIn(base - ASCENT[face] * size), w: pxIn(o.w || tw + 6), h: pxIn(size * 1.3),
       fontFace: face, fontSize: pxPt(size), bold: !!o.bold, color: hex6(color),
       margin: 0, valign: 'top', wrap: false
-    }, o.underline ? { underline: { style: 'sng' } } : {}));
+    }, o.underline ? { underline: { style: 'sng' } } : {}, o.rotate ? { rotate: o.rotate } : {}));
     return tw;
   };
   // ข้อความที่กรอก: ใหญ่ถ้ามีค่า ย่ออัตโนมัติถ้ายาวเกิน (ไม่เล็กกว่า 14px) / ว่างให้เป็นจุดไข่ปลา เหมือน PDF
@@ -1448,9 +1613,9 @@ async function buildPPTX() {
     for (; size > 14; size--) { if (mw(v, size) <= maxW) break; }
     return text(v, x, base, size, color, { face: hasThai(v) ? 'Tahoma' : 'Arial', w: maxW });
   };
-  const rectShape = (x, y, w, h, color, lw) => slide.addShape(SHAPE.rect, {
+  const rectShape = (x, y, w, h, color, lw, rot) => slide.addShape(SHAPE.rect, Object.assign({
     x: pxIn(x), y: pxIn(y), w: pxIn(w), h: pxIn(h), fill: { type: 'none' }, line: { color: hex6(color), width: pxPt(lw) }
-  });
+  }, rot ? { rotate: rot } : {}));
   const lineShape = (x1, y1, x2, y2, color, lw, arrow) => slide.addShape(SHAPE.line, {
     x: pxIn(Math.min(x1, x2)), y: pxIn(Math.min(y1, y2)), w: pxIn(Math.abs(x2 - x1)), h: pxIn(Math.abs(y2 - y1)),
     flipH: x2 < x1, flipV: y2 < y1,
@@ -1479,48 +1644,106 @@ async function buildPPTX() {
   // --- รูปถ่ายในกรอบสีม่วง + รอยวาด (พิกัดต้องตรงกับ drawPage) ---
   const FX = 27, FY = 160, FW = 864, FH = 535, B = 3;
   const ax = FX + B, ay = FY + B;
-  items.forEach(it => resolveLinks(it.shapes, false));
-  resolveLinks(frameShapes, true);
+  items.forEach(it => resolveLinks(it.shapes, false, itemAr(it)));
+  resolveLinks(frameShapes, true, FRAME_W / FRAME_H);
   const inFrame = (x1, y1, x2, y2) => x2 >= ax && x1 <= ax + FRAME_W && y2 >= ay && y1 <= ay + FRAME_H;
 
   // รอยวาด (วงกลม/สี่เหลี่ยม/ลูกศร/ข้อความ) → รูปทรงของ PowerPoint (ข้ามชิ้นที่อยู่นอกกรอบทั้งชิ้น)
-  const drawn = (list, ox, oy, sw, sh, lw) => list.forEach(s => {
+  // รองรับการหมุน: s.r = มุมของรูปทรงเอง, tr = การหมุนของรูปถ่ายที่รอยวาดนั้นวางอยู่ (ถ้ามี)
+  const boundsOf = pts => ({ x1: Math.min(...pts.map(q => q.x)), y1: Math.min(...pts.map(q => q.y)), x2: Math.max(...pts.map(q => q.x)), y2: Math.max(...pts.map(q => q.y)) });
+  const cornersOf = (cc, hw, hh, th) => [[-hw, -hh], [hw, -hh], [hw, hh], [-hw, hh]].map(v => { const r = rotVec({ x: v[0], y: v[1] }, th); return { x: cc.x + r.x, y: cc.y + r.y }; });
+  const drawn = (list, ox, oy, sw, sh, lw, tr) => list.forEach(s => {
     if (s.t === 'pen') return;                 // แถบเครื่องมือไม่มีปากกาอิสระ
+    const P = (px, py) => (tr ? rotAround({ x: px, y: py }, { x: tr.cx, y: tr.cy }, tr.rot) : { x: px, y: py });
+    const er = tr ? tr.rot : 0;
     if (s.t === 'text') {
       const fs = lw * 5 * (s.z || 1), x = ox + s.a.x * sw, y = oy + s.a.y * sh;
-      if (!inFrame(x, y - fs, x + mw(s.s, fs, true), y)) return;
-      text(s.s, x, y, fs, s.c, { bold: true, face: hasThai(s.s) ? 'Tahoma' : 'Arial' });
+      const tw = mw(s.s, fs, true), th = (s.r || 0) + er, face = hasThai(s.s) ? 'Tahoma' : 'Arial';
+      const pc = P(x + tw / 2, y - 0.35 * fs);                  // จุดหมุน = กึ่งกลางกล่องข้อความ (ตรงกับใน PDF)
+      const bb = boundsOf(cornersOf(pc, tw / 2, fs * 0.65, th));
+      if (!inFrame(bb.x1, bb.y1, bb.x2, bb.y2)) return;
+      if (!th) { text(s.s, x, y, fs, s.c, { bold: true, face }); return; }
+      // วางกล่องข้อความของ PowerPoint ให้จุดกึ่งกลางกล่องหมุนไปอยู่ตำแหน่งเดียวกับใน PDF
+      const asc = ASCENT[face], off = rotVec({ x: 3, y: (1 - asc) * fs }, th);
+      const bx = pc.x + off.x, by = pc.y + off.y;
+      text(s.s, bx - tw / 2 - 3, by - 0.65 * fs + asc * fs, fs, s.c, { bold: true, face, rotate: rad2deg(th) });
       return;
     }
     const x1 = ox + s.a.x * sw, y1 = oy + s.a.y * sh, x2 = ox + s.b.x * sw, y2 = oy + s.b.y * sh;
+    if (s.t === 'arrow') {
+      const p1 = P(x1, y1), p2 = P(x2, y2);
+      if (!inFrame(Math.min(p1.x, p2.x), Math.min(p1.y, p2.y), Math.max(p1.x, p2.x), Math.max(p1.y, p2.y))) return;
+      lineShape(p1.x, p1.y, p2.x, p2.y, s.c, lw, true);
+      return;
+    }
     const bx1 = Math.min(x1, x2), by1 = Math.min(y1, y2), bx2 = Math.max(x1, x2), by2 = Math.max(y1, y2);
-    if (!inFrame(bx1, by1, bx2, by2)) return;
-    if (s.t === 'rect') rectShape(bx1, by1, bx2 - bx1, by2 - by1, s.c, lw);
-    else if (s.t === 'ellipse') slide.addShape(SHAPE.ellipse, {
-      x: pxIn(bx1), y: pxIn(by1), w: pxIn(bx2 - bx1), h: pxIn(by2 - by1), fill: { type: 'none' }, line: { color: hex6(s.c), width: pxPt(lw) }
-    });
-    else if (s.t === 'arrow') lineShape(x1, y1, x2, y2, s.c, lw, true);
+    const hw = (bx2 - bx1) / 2, hh = (by2 - by1) / 2, th = (s.r || 0) + er;
+    const cc = P((bx1 + bx2) / 2, (by1 + by2) / 2);
+    const bb = boundsOf(cornersOf(cc, hw, hh, th));
+    if (!inFrame(bb.x1, bb.y1, bb.x2, bb.y2)) return;
+    const rot = th ? rad2deg(th) : 0;
+    if (s.t === 'rect') rectShape(cc.x - hw, cc.y - hh, hw * 2, hh * 2, s.c, lw, rot);
+    else if (s.t === 'ellipse') slide.addShape(SHAPE.ellipse, Object.assign({
+      x: pxIn(cc.x - hw), y: pxIn(cc.y - hh), w: pxIn(hw * 2), h: pxIn(hh * 2), fill: { type: 'none' }, line: { color: hex6(s.c), width: pxPt(lw) }
+    }, rot ? { rotate: rot } : {}));
   });
 
   items.slice().sort((a, b) => a.z - b.z).forEach((it, n) => {
-    const { x, y, w: bw } = it.box, bh = boxH(it);
-    // ตัดรูปส่วนที่ล้นกรอบทิ้ง (เหมือนใน PDF) แล้ววางเป็นรูปภาพ 1 ชิ้น
-    const vx0 = Math.max(0, x), vy0 = Math.max(0, y), vx1 = Math.min(FRAME_W, x + bw), vy1 = Math.min(FRAME_H, y + bh);
-    if (vx1 > vx0 && vy1 > vy0) {
-      const sx = (vx0 - x) / bw * it.src.width, sy = (vy0 - y) / bh * it.src.height;
-      const sw = (vx1 - vx0) / bw * it.src.width, sh = (vy1 - vy0) / bh * it.src.height;
-      const c = document.createElement('canvas');
-      c.width = Math.max(1, Math.round(sw)); c.height = Math.max(1, Math.round(sh));
-      const cg = c.getContext('2d');
-      cg.fillStyle = '#fff'; cg.fillRect(0, 0, c.width, c.height);
-      cg.drawImage(it.src, sx, sy, sw, sh, 0, 0, c.width, c.height);
-      slide.addImage({
-        data: c.toDataURL('image/jpeg', 0.92),
-        x: pxIn(ax + vx0), y: pxIn(ay + vy0), w: pxIn(vx1 - vx0), h: pxIn(vy1 - vy0),
-        altText: 'รูปที่ ' + (n + 1)
-      });
+    const { x, y, w: bw } = it.box, bh = boxH(it), rot = it.rot || 0;
+    const cx = x + bw / 2, cy = y + bh / 2;
+    const lw = Math.max(2.5, LINE_W * (bw / it.canvas.width));
+    if (!rot) {
+      // ตัดรูปส่วนที่ล้นกรอบทิ้ง (เหมือนใน PDF) แล้ววางเป็นรูปภาพ 1 ชิ้น
+      const vx0 = Math.max(0, x), vy0 = Math.max(0, y), vx1 = Math.min(FRAME_W, x + bw), vy1 = Math.min(FRAME_H, y + bh);
+      if (vx1 > vx0 && vy1 > vy0) {
+        const sx = (vx0 - x) / bw * it.src.width, sy = (vy0 - y) / bh * it.src.height;
+        const sw = (vx1 - vx0) / bw * it.src.width, sh = (vy1 - vy0) / bh * it.src.height;
+        const c = document.createElement('canvas');
+        c.width = Math.max(1, Math.round(sw)); c.height = Math.max(1, Math.round(sh));
+        const cg = c.getContext('2d');
+        cg.fillStyle = '#fff'; cg.fillRect(0, 0, c.width, c.height);
+        cg.drawImage(it.src, sx, sy, sw, sh, 0, 0, c.width, c.height);
+        slide.addImage({
+          data: c.toDataURL('image/jpeg', 0.92),
+          x: pxIn(ax + vx0), y: pxIn(ay + vy0), w: pxIn(vx1 - vx0), h: pxIn(vy1 - vy0),
+          altText: 'รูปที่ ' + (n + 1)
+        });
+      }
+    } else {
+      // รูปที่หมุน: อยู่ในกรอบทั้งใบ = วางเป็นรูปที่หมุนได้ใน PowerPoint / ล้นกรอบ = ตัดส่วนที่ล้นแล้ววางเป็นรูปนิ่ง (เหมือนใน PDF)
+      const cs = [[x, y], [x + bw, y], [x + bw, y + bh], [x, y + bh]].map(([px, py]) => rotAround({ x: px, y: py }, { x: cx, y: cy }, rot));
+      const inside = cs.every(q => q.x >= 0 && q.x <= FRAME_W && q.y >= 0 && q.y <= FRAME_H);
+      if (inside) {
+        const c = document.createElement('canvas');
+        c.width = it.src.width; c.height = it.src.height;
+        const cg = c.getContext('2d');
+        cg.fillStyle = '#fff'; cg.fillRect(0, 0, c.width, c.height);
+        cg.drawImage(it.src, 0, 0);
+        slide.addImage({
+          data: c.toDataURL('image/jpeg', 0.92),
+          x: pxIn(ax + x), y: pxIn(ay + y), w: pxIn(bw), h: pxIn(bh), rotate: rad2deg(rot),
+          altText: 'รูปที่ ' + (n + 1)
+        });
+      } else {
+        const bb = boundsOf(cs);
+        const vx0 = clamp(bb.x1, 0, FRAME_W), vx1 = clamp(bb.x2, 0, FRAME_W), vy0 = clamp(bb.y1, 0, FRAME_H), vy1 = clamp(bb.y2, 0, FRAME_H);
+        if (vx1 > vx0 && vy1 > vy0) {
+          const sc = clamp(it.src.width / bw, 1, 2.5);
+          const c = document.createElement('canvas');
+          c.width = Math.max(1, Math.round((vx1 - vx0) * sc)); c.height = Math.max(1, Math.round((vy1 - vy0) * sc));
+          const cg = c.getContext('2d');
+          cg.scale(sc, sc); cg.translate(-vx0, -vy0);
+          cg.translate(cx, cy); cg.rotate(rot); cg.translate(-cx, -cy);
+          cg.drawImage(it.src, x, y, bw, bh);
+          slide.addImage({
+            data: c.toDataURL('image/png'),
+            x: pxIn(ax + vx0), y: pxIn(ay + vy0), w: pxIn(vx1 - vx0), h: pxIn(vy1 - vy0),
+            altText: 'รูปที่ ' + (n + 1)
+          });
+        }
+      }
     }
-    drawn(it.shapes, ax + x, ay + y, bw, bh, Math.max(2.5, LINE_W * (bw / it.canvas.width)));
+    drawn(it.shapes, ax + x, ay + y, bw, bh, lw, rot ? { cx: ax + cx, cy: ay + cy, rot } : null);
   });
   drawn(frameShapes, ax, ay, FRAME_W, FRAME_H, FRAME_LINE);
 
@@ -1660,7 +1883,7 @@ function resetForm() {
   document.getElementById('drawingIndex').value = '';
   document.getElementById('problem').value = '';
   items.forEach(it => it.card.remove());
-  items = []; selected = null; frameShapes = []; fcur = null; layoutManual = false;
+  items = []; selected = null; frameShapes = []; fcur = null;
   document.getElementById('mail-hint').style.display = 'none';
   refreshUI();
   scheduleFrame();
