@@ -1372,7 +1372,7 @@ function mailParts() {
   const problem = document.getElementById('problem').value.trim();
   return {
     mold, problem,
-    subject: 'แจ้งซ่อม Mold ' + (mold || '-') + (problem ? ' : ' + problem : ''),
+    subject: '[TEF21-Repair-Sheet] แจ้งซ่อม Mold ' + (mold || '-') + (problem ? ' : ' + problem : ''),
     body: 'เรียนผู้เกี่ยวข้อง\n\nแจ้งซ่อม Mold: ' + (mold || '-') + '\nปัญหา: ' + (problem || '-') + '\n\nแนบไฟล์ PDF ตามเอกสารแนบ'
   };
 }
