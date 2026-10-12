@@ -168,6 +168,8 @@ input[type=text]:focus, select:focus { border-color:var(--p); background:#fff; }
 .app-header { flex-wrap:nowrap; gap:12px; }
 .app-header img { height:30px; width:auto; flex:none; display:block; }
 .header-title { font-size:clamp(15px, 4.8vw, 20px); white-space:nowrap; min-width:0; overflow:hidden; text-overflow:ellipsis; }
+#selbar { display:none; position:fixed; left:50%; transform:translateX(-50%); bottom:max(16px, env(safe-area-inset-bottom)); z-index:60; width:max-content; max-width:calc(100vw - 24px); align-items:center; gap:8px; background:#fff; border:1px solid #cfd8e3; border-radius:999px; padding:7px 8px 7px 16px; box-shadow:0 8px 24px rgba(0,40,90,.25); font-size:13px; color:#4a5584; font-weight:600; }
+#selbar .grow { min-width:0; max-width:46vw; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 </style>
 </head>
 <body>
@@ -218,10 +220,11 @@ input[type=text]:focus, select:focus { border-color:var(--p); background:#fff; }
       <input type="file" id="imageLoader" accept="image/*" multiple>
     </div>
     <div class="count-row">
-      <span>* เลือกเครื่องมือด้านบนแล้ววาดทับจุดเสีย · เครื่องมือ T แตะบนรูปแล้วพิมพ์ข้อความ</span>
+      <span>* เลือกเครื่องมือด้านบนแล้ววาด · T = พิมพ์ข้อความ · ลูกศรชี้ = เลือก/ย้าย/ย่อขยายสิ่งที่วาดไว้</span>
       <span id="img-count">0/15</span>
     </div>
     <div id="toolbar">
+      <button class="tool" data-tool="select" type="button" title="เลือก / ย้าย / ย่อขยาย"><i class="ic" data-ic="pointer"></i></button>
       <button class="tool active" data-tool="ellipse" type="button" title="วงกลม"><i class="ic" data-ic="circle"></i></button>
       <button class="tool" data-tool="rect" type="button" title="สี่เหลี่ยม"><i class="ic" data-ic="square"></i></button>
       <button class="tool" data-tool="arrow" type="button" title="ลูกศร"><i class="ic" data-ic="arrowur"></i></button>
@@ -232,6 +235,11 @@ input[type=text]:focus, select:focus { border-color:var(--p); background:#fff; }
       <span class="dot" data-col="#1E6CFF" style="background:#1E6CFF" title="น้ำเงิน"></span>
       <span class="sep"></span>
       <button class="lockbtn" id="scrollLockBtn" type="button" title="เปิดแล้วลากนิ้วบนรูปเพื่อเลื่อนหน้าได้ (ปิดการวาด/ย้ายชั่วคราว)"><i class="ic" data-ic="updown"></i><span class="lbl"> เลื่อนหน้า</span></button>
+    </div>
+    <div id="selbar">
+      <span id="selinfo" class="grow">เลือกอยู่</span>
+      <button class="mini outline" id="selEdit" type="button" onclick="editSelectedText()"><i class="ic" data-ic="pen"></i>แก้ข้อความ</button>
+      <button class="mini danger" id="selDel" type="button" onclick="deleteSelected()"><i class="ic" data-ic="trash"></i>ลบ</button>
     </div>
     <div id="img-empty">ยังไม่มีรูป กดปุ่มด้านบนเพื่อเพิ่มรูป</div>
     <div id="img-list"></div>
@@ -289,6 +297,7 @@ const ICONS = {
   square:'<rect x="4" y="5" width="16" height="14" rx="2"/>',
   arrowur:'<path d="M7 17L17 7M8 7h9v9"/>',
   text:'<path d="M4 7V4h16v3M9 20h6M12 4v16"/>',
+  pointer:'<path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/>',
   updown:'<path d="M12 3v18M8 7l4-4 4 4M8 17l4 4 4-4"/>',
   camera:'<path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/>',
   crop:'<path d="M6 2v14a2 2 0 002 2h14M2 6h14a2 2 0 012 2v14"/>',
@@ -368,6 +377,7 @@ const loader = document.getElementById('imageLoader');
 document.querySelectorAll('#toolbar .tool').forEach(b => b.addEventListener('click', () => {
   tool = b.dataset.tool;
   document.querySelectorAll('#toolbar .tool').forEach(x => x.classList.toggle('active', x === b));
+  if (tool !== 'select') clearSelection();
 }));
 document.querySelectorAll('#toolbar .dot').forEach(d => d.addEventListener('click', () => {
   color = d.dataset.col;
@@ -449,25 +459,29 @@ function createItem(src) {
     if (tf.isTwo()) { drawing = false; item.current = null; item.cropDrag = null; render(item); return; }
     if (item.cropMode) { e.preventDefault(); canvas.setPointerCapture(e.pointerId); cropDown(item, e); return; }
     if (tool === 'text') { e.preventDefault(); item.textPos = pos(e); return; }
+    if (tool === 'select') { e.preventDefault(); canvas.setPointerCapture(e.pointerId); selDown(item, pos(e), kOf(canvas), () => render(item)); return; }
     e.preventDefault(); canvas.setPointerCapture(e.pointerId); drawing = true;
     let p = pos(e);
     item.snap = null;
     if (tool === 'arrow') {                       // จุดเริ่มลูกศรล็อกเข้าหารูปทรงที่อยู่ใกล้
       const sn = snapSite(item.shapes, p, canvas.width, canvas.height, snapThr(canvas));
-      if (sn) { p = { x: sn.x, y: sn.y }; item.snap = sn; }
+      if (sn) { p = { x: sn.x, y: sn.y }; item.snap = sn; item.snapLink = linkOfSite(sn); } else item.snapLink = null;
     }
     item.current = tool === 'pen' ? { t:'pen', c:color, pts:[p] } : { t:tool, c:color, a:p, b:p };
+    if (tool === 'arrow' && item.snapLink) item.current.la = item.snapLink;
     render(item);
   });
   canvas.addEventListener('pointermove', e => {
     if (tf.isTwo()) return;
     if (item.cropMode) { if (item.cropDrag) { e.preventDefault(); cropMove(item, e); } return; }
+    if (selDrag && selDrag.owner === item) { e.preventDefault(); selMove(pos(e)); render(item); return; }
     if (!drawing) return; e.preventDefault();
     let p = pos(e);
     if (item.current.t === 'arrow') {             // ปลายลูกศรล็อกเข้าหาจุดเชื่อมของวงกลม/สี่เหลี่ยม
       const sn = snapSite(item.shapes, p, canvas.width, canvas.height, snapThr(canvas));
       item.snap = sn;
       if (sn) p = { x: sn.x, y: sn.y };
+      item.current.lb = sn ? linkOfSite(sn) : null;
     }
     if (item.current.t === 'pen') item.current.pts.push(p); else item.current.b = p;
     render(item);
@@ -481,10 +495,11 @@ function createItem(src) {
       }, 0);
       return;
     }
+    if (selDrag && selDrag.owner === item) { selDrag = null; render(item); return; }
     if (item.cropMode) { item.cropDrag = null; return; }
     if (!drawing) return; drawing = false;
     const s = item.current; item.current = null; item.snap = null;
-    if (s && validShape(s)) item.shapes.push(s);
+    if (s && validShape(s)) { normShape(s); item.shapes.push(s); }
     render(item);
   };
   canvas.addEventListener('pointerup', end);
@@ -499,10 +514,17 @@ function createItem(src) {
     if (act === 'crop-cancel') exitCrop(item);
     if (act === 'crop-reset') { item.cropRect = { x:0, y:0, w:1, h:1 }; render(item); }
     if (item.cropMode) return;
-    if (act === 'undo') { item.shapes.pop(); render(item); }
-    if (act === 'clear') { item.shapes = []; item.current = null; render(item); }
+    if (act === 'undo') { const last = item.shapes[item.shapes.length - 1]; if (last) removeShape(item, last); render(item); }
+    if (act === 'clear') {
+      item.shapes.forEach(sh => detachLinksTo(l => l.sh === sh));
+      item.shapes = []; item.current = null;
+      if (selection && selection.owner === item) { selection = null; refreshSelUI(); }
+      render(item);
+    }
     if (act === 'del') {
       if (!confirm('ลบรูปนี้?')) return;
+      detachLinksTo(l => l.item === item);
+      if (selection && selection.owner === item) { selection = null; selDrag = null; refreshSelUI(); }
       items = items.filter(x => x !== item);
       if (selected === item) selected = null;
       card.remove();
@@ -528,16 +550,19 @@ function refreshUI() {
 function render(it) {
   if (it.cropMode) { renderCrop(it); return; }
   const c = it.ctx, w = it.canvas.width, h = it.canvas.height;
+  resolveLinks(it.shapes, false);
   c.fillStyle = '#fff'; c.fillRect(0, 0, w, h);
   c.drawImage(it.src, 0, 0, w, h);
   drawShapes(c, it.current ? it.shapes.concat([it.current]) : it.shapes, 0, 0, w, h, LINE_W);
   if (it.current && it.current.t === 'arrow') drawSites(c, it.shapes, 0, 0, w, h, it.snap, 5);
+  drawSelection(c, it, kOf(it.canvas));
   scheduleFrame();
 }
 
 /* ============ ครอบตัดรูป (Crop) ============ */
 // เก็บรูปต้นฉบับไว้ (orig) จึงครอบใหม่/กลับเป็นเต็มรูปได้เสมอ รอยวาดที่ทำไว้จะถูกย้ายตำแหน่งตามให้อัตโนมัติ
 function enterCrop(it) {
+  if (selection && selection.owner === it) { selection = null; selDrag = null; refreshSelUI(); }
   it.cropMode = true;
   it.cropRect = { ...it.crop };
   it.current = null;
@@ -636,8 +661,8 @@ function shapeSites(s) {
 }
 function allSites(list) {
   const out = [];
-  list.forEach(s => shapeSites(s).forEach(q => {
-    if (q[0] >= 0 && q[0] <= 1 && q[1] >= 0 && q[1] <= 1) out.push({ x: q[0], y: q[1] });
+  list.forEach(s => shapeSites(s).forEach((q, k) => {
+    if (q[0] >= 0 && q[0] <= 1 && q[1] >= 0 && q[1] <= 1) out.push({ x: q[0], y: q[1], sh: s, k });
   }));
   return out;
 }
@@ -669,12 +694,211 @@ function frameSnapShapes() {
     const h = boxH(it);
     const m = q => ({ x: (it.box.x + q.x * it.box.w) / FRAME_W, y: (it.box.y + q.y * h) / FRAME_H });
     it.shapes.forEach(sh => {
-      if (sh.t === 'rect' || sh.t === 'ellipse') out.push({ t: sh.t, a: m(sh.a), b: m(sh.b) });
+      if (sh.t === 'rect' || sh.t === 'ellipse') out.push({ t: sh.t, a: m(sh.a), b: m(sh.b), _src: sh, _item: it });
     });
   });
   return out;
 }
 const snapThr = (cv) => 24 * cv.width / (cv.getBoundingClientRect().width || cv.width);   // ระยะดูด ~24px บนหน้าจอ
+
+
+/* ============ เลือก / ย้าย / ย่อขยาย สิ่งที่วาดไว้ (วงกลม สี่เหลี่ยม ลูกศร ข้อความ) ============ */
+let selection = null;            // { owner: item | 'frame', shape }
+let selDrag = null;
+const ownerList = o => (o === 'frame' ? frameShapes : o.shapes);
+const ownerDims = o => (o === 'frame' ? { W: FRAME_W, H: FRAME_H } : { W: o.canvas.width, H: o.canvas.height });
+const kOf = cv => cv.width / (cv.getBoundingClientRect().width || cv.width);   // พิกัดภายใน canvas ต่อ 1px บนหน้าจอ
+function renderOwner(o) { if (o === 'frame') scheduleFrame(); else render(o); }
+const measureCtx = document.createElement('canvas').getContext('2d');
+
+function textMetrics(s, W, H) {
+  const fs = LINE_W * 5 * (s.z || 1);
+  measureCtx.font = 'bold ' + fs + 'px ' + FONT;
+  const w = measureCtx.measureText(s.s).width, x = s.a.x * W, y = s.a.y * H;
+  return { x, y, w, fs, x1: x, y1: y - fs, x2: x + w, y2: y + fs * 0.3 };
+}
+function shapeBox(s, W, H) {
+  if (s.t === 'text') { const m = textMetrics(s, W, H); return { x1: m.x1, y1: m.y1, x2: m.x2, y2: m.y2 }; }
+  const xs = [s.a.x * W, s.b.x * W], ys = [s.a.y * H, s.b.y * H];
+  return { x1: Math.min(...xs), y1: Math.min(...ys), x2: Math.max(...xs), y2: Math.max(...ys) };
+}
+function shapeHandles(s, W, H) {
+  if (s.t === 'arrow') return [{ id: 'a', x: s.a.x * W, y: s.a.y * H }, { id: 'b', x: s.b.x * W, y: s.b.y * H }];
+  const b = shapeBox(s, W, H);
+  if (s.t === 'text') return [{ id: 'sc', x: b.x2, y: b.y2 }];
+  return [{ id: 'nw', x: b.x1, y: b.y1 }, { id: 'ne', x: b.x2, y: b.y1 }, { id: 'sw', x: b.x1, y: b.y2 }, { id: 'se', x: b.x2, y: b.y2 }];
+}
+function distSeg(px, py, x1, y1, x2, y2) {
+  const dx = x2 - x1, dy = y2 - y1, l2 = dx * dx + dy * dy;
+  let t = l2 ? ((px - x1) * dx + (py - y1) * dy) / l2 : 0;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
+}
+function hitBody(s, p, W, H, tol) {
+  if (s.t === 'arrow') return distSeg(p.x, p.y, s.a.x * W, s.a.y * H, s.b.x * W, s.b.y * H) <= tol;
+  const b = shapeBox(s, W, H);
+  if (s.t === 'text') return p.x >= b.x1 - tol && p.x <= b.x2 + tol && p.y >= b.y1 - tol && p.y <= b.y2 + tol;
+  if (s.t === 'rect') {
+    const out = p.x >= b.x1 - tol && p.x <= b.x2 + tol && p.y >= b.y1 - tol && p.y <= b.y2 + tol;
+    const inn = p.x > b.x1 + tol && p.x < b.x2 - tol && p.y > b.y1 + tol && p.y < b.y2 - tol;
+    return out && !inn;                               // เลือกที่เส้นขอบ (เหมือน PowerPoint ที่ไม่มีสีพื้น)
+  }
+  if (s.t === 'ellipse') {
+    const cx = (b.x1 + b.x2) / 2, cy = (b.y1 + b.y2) / 2, rx = Math.max(1, (b.x2 - b.x1) / 2), ry = Math.max(1, (b.y2 - b.y1) / 2);
+    return Math.abs(Math.hypot((p.x - cx) / rx, (p.y - cy) / ry) - 1) * Math.min(rx, ry) <= tol;
+  }
+  return false;
+}
+function normShape(s) {                                // ให้ a = มุมบนซ้าย, b = มุมล่างขวา เสมอ (ลำดับจุดเชื่อมจะคงที่)
+  if (s.t !== 'rect' && s.t !== 'ellipse') return;
+  const a = { x: Math.min(s.a.x, s.b.x), y: Math.min(s.a.y, s.b.y) }, b = { x: Math.max(s.a.x, s.b.x), y: Math.max(s.a.y, s.b.y) };
+  s.a = a; s.b = b;
+}
+
+// ----- ลูกศรที่ล็อกกับรูปทรง: ตามรูปทรงไปเมื่อย้าย/ย่อขยาย -----
+function linkOfSite(site) {
+  const sh = site.sh;
+  return sh._src ? { sh: sh._src, k: site.k, item: sh._item } : { sh, k: site.k };
+}
+function siteXY(sh, k) { const q = shapeSites(sh)[k]; return q ? { x: q[0], y: q[1] } : null; }
+function resolveLinks(list, toFrame) {
+  list.forEach(s => {
+    if (s.t !== 'arrow') return;
+    ['la', 'lb'].forEach(key => {
+      const l = s[key]; if (!l) return;
+      let p = siteXY(l.sh, l.k);
+      if (!p) { s[key] = null; return; }
+      if (toFrame && l.item) {
+        if (!items.includes(l.item)) { s[key] = null; return; }
+        p = { x: (l.item.box.x + p.x * l.item.box.w) / FRAME_W, y: (l.item.box.y + p.y * boxH(l.item)) / FRAME_H };
+      }
+      if (key === 'la') s.a = p; else s.b = p;
+    });
+  });
+}
+function detachLinksTo(match) {
+  const fix = list => list.forEach(s => {
+    if (s.t !== 'arrow') return;
+    if (s.la && match(s.la)) s.la = null;
+    if (s.lb && match(s.lb)) s.lb = null;
+  });
+  fix(frameShapes); items.forEach(it => fix(it.shapes));
+}
+function removeShape(owner, sh) {
+  const list = ownerList(owner), i = list.indexOf(sh);
+  if (i < 0) return;
+  list.splice(i, 1);
+  detachLinksTo(l => l.sh === sh);
+  if (selection && selection.shape === sh) { selection = null; refreshSelUI(); }
+}
+
+// ----- เลือก/ลาก -----
+function refreshSelUI() {
+  const bar = document.getElementById('selbar');
+  if (!bar) return;
+  bar.style.display = selection ? 'flex' : 'none';
+  if (!selection) return;
+  const names = { rect: 'สี่เหลี่ยม', ellipse: 'วงกลม', arrow: 'ลูกศร', text: 'ข้อความ' };
+  const sh = selection.shape;
+  document.getElementById('selinfo').textContent = 'เลือกอยู่: ' + (names[sh.t] || '') + (sh.t === 'text' ? ' "' + sh.s + '"' : '');
+  document.getElementById('selEdit').style.display = sh.t === 'text' ? 'inline-flex' : 'none';
+}
+function clearSelection() {
+  const prev = selection && selection.owner;
+  selection = null; selDrag = null;
+  refreshSelUI();
+  if (prev) renderOwner(prev);
+}
+function deleteSelected() {
+  if (!selection) return;
+  const o = selection.owner;
+  removeShape(o, selection.shape);
+  selection = null; refreshSelUI(); renderOwner(o);
+}
+function editSelectedText() {
+  if (!selection || selection.shape.t !== 'text') return;
+  const t = prompt('แก้ไขข้อความ:', selection.shape.s);
+  if (t !== null && t.trim()) { selection.shape.s = t.trim(); refreshSelUI(); renderOwner(selection.owner); }
+}
+document.addEventListener('keydown', e => {
+  if ((e.key === 'Delete' || e.key === 'Backspace') && selection && !/^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement || {}).tagName || '')) {
+    e.preventDefault(); deleteSelected();
+  }
+});
+
+function startSelDrag(owner, sh, mode, np, W, H, k) {
+  selDrag = { owner, shape: sh, mode, p0: np, W, H, k, snap: null,
+    orig: { a: sh.a ? { x: sh.a.x, y: sh.a.y } : null, b: sh.b ? { x: sh.b.x, y: sh.b.y } : null } };
+  if (sh.t === 'text') { selDrag.w1 = textMetrics({ s: sh.s, a: sh.a, z: 1 }, W, H).w; selDrag.x0 = sh.a.x * W; }
+}
+// แตะ/กดในโหมด "เลือก": จับจุดมุมของรูปทรงที่เลือกอยู่ -> ย่อขยาย, จับตัวรูปทรง -> ย้าย, แตะที่ว่าง -> ยกเลิกการเลือก
+function selDown(owner, np, k, redraw) {
+  const { W, H } = ownerDims(owner), p = { x: np.x * W, y: np.y * H };
+  const tol = 11 * k, hr = 18 * k;
+  if (selection && selection.owner === owner) {
+    const h = shapeHandles(selection.shape, W, H).find(q => Math.hypot(q.x - p.x, q.y - p.y) <= hr);
+    if (h) { startSelDrag(owner, selection.shape, h.id, np, W, H, k); redraw(); return; }
+  }
+  const list = ownerList(owner);
+  for (let i = list.length - 1; i >= 0; i--) {
+    if (hitBody(list[i], p, W, H, tol)) {
+      const prev = selection && selection.owner !== owner ? selection.owner : null;
+      selection = { owner, shape: list[i] };
+      startSelDrag(owner, list[i], 'move', np, W, H, k);
+      refreshSelUI(); if (prev) renderOwner(prev);
+      redraw(); return;
+    }
+  }
+  const prev = selection && selection.owner;
+  selection = null; refreshSelUI();
+  if (prev && prev !== owner) renderOwner(prev);
+  redraw();
+}
+function selMove(np) {
+  const d = selDrag; if (!d) return;
+  const s = d.shape, o = d.orig, W = d.W, H = d.H;
+  const dx = np.x - d.p0.x, dy = np.y - d.p0.y;
+  if (d.mode === 'move') {
+    s.a = { x: o.a.x + dx, y: o.a.y + dy };
+    if (s.b) s.b = { x: o.b.x + dx, y: o.b.y + dy };
+    if (s.t === 'arrow') { s.la = null; s.lb = null; }      // ย้ายทั้งลูกศร = ปลดจากรูปทรงที่เชื่อมอยู่
+  } else if (d.mode === 'a' || d.mode === 'b') {            // ลากปลายลูกศร: ดูดเข้าจุดเชื่อมของรูปทรงอื่น
+    const cand = (d.owner === 'frame' ? frameSnapShapes() : d.owner.shapes).filter(x => x !== s);
+    const sn = snapSite(cand, np, W, H, 24 * d.k);
+    d.snap = sn;
+    s[d.mode] = sn ? { x: sn.x, y: sn.y } : { x: np.x, y: np.y };
+    s[d.mode === 'a' ? 'la' : 'lb'] = sn ? linkOfSite(sn) : null;
+  } else if (d.mode === 'sc') {
+    s.z = clamp((np.x * W - d.x0) / d.w1, 0.3, 8);
+  } else {                                                 // มุมของวงกลม/สี่เหลี่ยม: ย่อขยายโดยตรึงมุมตรงข้าม
+    const x1 = Math.min(o.a.x, o.b.x), x2 = Math.max(o.a.x, o.b.x), y1 = Math.min(o.a.y, o.b.y), y2 = Math.max(o.a.y, o.b.y);
+    const fx = d.mode.includes('w') ? x2 : x1, fy = d.mode.includes('n') ? y2 : y1;
+    s.a = { x: Math.min(fx, np.x), y: Math.min(fy, np.y) };
+    s.b = { x: Math.max(fx, np.x), y: Math.max(fy, np.y) };
+  }
+}
+function drawSelection(c, owner, k) {
+  if (!selection || selection.owner !== owner) return;
+  const { W, H } = ownerDims(owner), s = selection.shape;
+  c.save();
+  c.strokeStyle = '#1E6CFF'; c.lineWidth = 1.5 * k;
+  if (s.t !== 'arrow') {
+    const b = shapeBox(s, W, H);
+    c.setLineDash([6 * k, 4 * k]);
+    c.strokeRect(b.x1 - 4 * k, b.y1 - 4 * k, b.x2 - b.x1 + 8 * k, b.y2 - b.y1 + 8 * k);
+    c.setLineDash([]);
+  }
+  shapeHandles(s, W, H).forEach(h => {
+    c.beginPath();
+    if (s.t === 'arrow') c.arc(h.x, h.y, 7 * k, 0, Math.PI * 2); else c.rect(h.x - 6 * k, h.y - 6 * k, 12 * k, 12 * k);
+    c.fillStyle = '#fff'; c.fill(); c.lineWidth = 2.5 * k; c.stroke();
+  });
+  if (selDrag && selDrag.owner === owner && (selDrag.mode === 'a' || selDrag.mode === 'b')) {
+    const cand = (owner === 'frame' ? frameSnapShapes() : owner.shapes).filter(x => x !== s);
+    drawSites(c, cand, 0, 0, W, H, selDrag.snap, 5 * k);
+  }
+  c.restore();
+}
 
 // วาดรูปทรงทั้งหมด (พิกัดเก็บเป็นสัดส่วน 0-1 ของรูป จึงวาดซ้ำที่ความละเอียดสูงตอนทำ PDF ได้)
 function drawShapes(c, list, ox, oy, w, h, lw) {
@@ -683,7 +907,7 @@ function drawShapes(c, list, ox, oy, w, h, lw) {
   list.forEach(s => {
     c.strokeStyle = s.c; c.fillStyle = s.c;
     if (s.t === 'text') {                       // ข้อความ: ตัวหนา มีขอบขาวให้อ่านง่ายบนรูป
-      const x = ox + s.a.x*w, y = oy + s.a.y*h, fs = lw * 5;
+      const x = ox + s.a.x*w, y = oy + s.a.y*h, fs = lw * 5 * (s.z || 1);
       c.font = 'bold ' + fs + 'px ' + FONT; c.textBaseline = 'alphabetic'; c.textAlign = 'left';
       c.strokeStyle = '#fff'; c.lineWidth = lw * 1.3;
       c.strokeText(s.s, x, y);
@@ -728,7 +952,7 @@ const fctx = frameCanvas.getContext('2d');
 frameCanvas.width = FRAME_W; frameCanvas.height = FRAME_H;
 let layoutManual = false, selected = null, zc = 0, rafPending = false, drag = null;
 let frameMode = 'move';              // 'move' = จัดวางรูป, 'draw' = วาดลูกศร/วงกลม/สี่เหลี่ยมบนกรอบ (ไม่ผูกกับรูป)
-let frameShapes = [], fcur = null, fdrawing = false, fsnap = null, ftextPos = null;
+let frameShapes = [], fcur = null, fdrawing = false, fsnap = null, ftextPos = null, fsnapLink = null;
 const FRAME_LINE = 4;
 
 const boxH = it => it.box.w * it.src.height / it.src.width;
@@ -796,6 +1020,8 @@ function autoLayout() {
 
 // วาดรูป+รอยวาดทั้งหมดตามตำแหน่งที่จัดไว้ (ใช้ทั้งหน้าตัวอย่างและ PDF)
 function drawFrameImages(g, preview) {
+  items.forEach(it => resolveLinks(it.shapes, false));
+  resolveLinks(frameShapes, true);
   items.slice().sort((a, b) => a.z - b.z).forEach(it => {
     const { x, y, w } = it.box, h = boxH(it);
     g.drawImage(it.src, x, y, w, h);
@@ -819,6 +1045,7 @@ function drawFrameImages(g, preview) {
 function drawFrame() {
   fctx.fillStyle = '#fff'; fctx.fillRect(0, 0, FRAME_W, FRAME_H);
   drawFrameImages(fctx, true);
+  if (frameMode === 'draw') drawSelection(fctx, 'frame', FRAME_W / (frameCanvas.getBoundingClientRect().width || FRAME_W));
 }
 function scheduleFrame() {
   if (rafPending) return;
@@ -829,6 +1056,7 @@ function scheduleFrame() {
 function setFrameMode(m) {
   frameMode = m;
   fcur = null; fdrawing = false; drag = null;
+  if (m !== 'draw' && selection && selection.owner === 'frame') { selection = null; selDrag = null; refreshSelUI(); }
   document.querySelectorAll('.mode-row .mode').forEach(b => b.classList.toggle('active', b.dataset.mode === m));
   frameCanvas.style.cursor = m === 'draw' ? 'crosshair' : 'move';
   document.getElementById('frame-hint').textContent = m === 'draw'
@@ -837,8 +1065,8 @@ function setFrameMode(m) {
   scheduleFrame();
 }
 document.querySelectorAll('.mode-row .mode').forEach(b => b.addEventListener('click', () => setFrameMode(b.dataset.mode)));
-function frameUndo() { frameShapes.pop(); scheduleFrame(); }
-function frameClear() { if (frameShapes.length && !confirm('ลบรอยวาดบนกรอบทั้งหมด?')) return; frameShapes = []; scheduleFrame(); }
+function frameUndo() { const last = frameShapes[frameShapes.length - 1]; if (last) removeShape('frame', last); scheduleFrame(); }
+function frameClear() { if (frameShapes.length && !confirm('ลบรอยวาดบนกรอบทั้งหมด?')) return; frameShapes.forEach(sh => detachLinksTo(l => l.sh === sh)); frameShapes = []; if (selection && selection.owner === 'frame') { selection = null; refreshSelUI(); } scheduleFrame(); }
 setFrameMode('move');
 
 const fpos = e => {
@@ -861,6 +1089,11 @@ frameCanvas.addEventListener('pointerdown', e => {
     drag = null; layoutManual = true;
     return;
   }
+  if (frameMode === 'draw' && tool === 'select') {
+    frameCanvas.setPointerCapture(e.pointerId);
+    selDown('frame', { x: p.x / FRAME_W, y: p.y / FRAME_H }, FRAME_W / (frameCanvas.getBoundingClientRect().width || FRAME_W), scheduleFrame);
+    return;
+  }
   if (frameMode === 'draw' && tool === 'text') { ftextPos = { x: p.x / FRAME_W, y: p.y / FRAME_H }; return; }
   if (frameMode === 'draw') {
     frameCanvas.setPointerCapture(e.pointerId);
@@ -870,8 +1103,10 @@ frameCanvas.addEventListener('pointerdown', e => {
     if (tool === 'arrow') {
       const sn = snapSite(frameSnapShapes(), q, FRAME_W, FRAME_H, snapThr(frameCanvas));
       if (sn) { q = { x: sn.x, y: sn.y }; fsnap = sn; }
+      fsnapLink = sn ? linkOfSite(sn) : null;
     }
     fcur = tool === 'pen' ? { t:'pen', c:color, pts:[q] } : { t:tool, c:color, a:q, b:q };
+    if (tool === 'arrow' && fsnapLink) fcur.la = fsnapLink;
     scheduleFrame();
     return;
   }
@@ -907,6 +1142,7 @@ frameCanvas.addEventListener('pointermove', e => {
     }
     return;
   }
+  if (selDrag && selDrag.owner === 'frame') { e.preventDefault(); const sp = fpos(e); selMove({ x: sp.x / FRAME_W, y: sp.y / FRAME_H }); scheduleFrame(); return; }
   if (fdrawing && fcur) {
     e.preventDefault();
     const p = fpos(e);
@@ -915,6 +1151,7 @@ frameCanvas.addEventListener('pointermove', e => {
       const sn = snapSite(frameSnapShapes(), q, FRAME_W, FRAME_H, snapThr(frameCanvas));
       fsnap = sn;
       if (sn) q = { x: sn.x, y: sn.y };
+      fcur.lb = sn ? linkOfSite(sn) : null;
     }
     if (fcur.t === 'pen') fcur.pts.push(q); else fcur.b = q;
     scheduleFrame();
@@ -946,12 +1183,13 @@ const endFrameDrag = e => {
     }, 0);
     return;
   }
+  if (selDrag && selDrag.owner === 'frame') { selDrag = null; scheduleFrame(); }
   if (fpointers.size < 2) pinch = null;
   drag = null;
   if (fdrawing) {
     fdrawing = false;
     const s = fcur; fcur = null; fsnap = null;
-    if (s && validShape(s)) frameShapes.push(s);
+    if (s && validShape(s)) { normShape(s); frameShapes.push(s); }
     scheduleFrame();
   }
 };
