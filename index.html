@@ -208,9 +208,14 @@ input[type=text]:focus, select:focus { border-color:var(--p); background:#fff; }
       <option value="wire">Wire cut</option>
       <option value="mill">Milling</option>
       <option value="measure">Measurement</option>
-      <option value="modgrind">Ad air vent by grinding</option>
-      <option value="modmill">Ad air vent by milling</option>
+      <option value="modgrind">Add air vent by grinding</option>
+      <option value="modmill">Add air vent by milling</option>
     </select>
+  </div>
+
+  <div class="form-group">
+    <label>Current drawing index</label>
+    <input type="text" id="drawingIndex" placeholder="ระบุ Current drawing index (เว้นว่างได้)">
   </div>
 
   <div class="form-group">
@@ -1227,8 +1232,8 @@ const DETAIL_ROWS = [
     ['wire', 'Wire cut', 371],
     ['mill', 'Milling', 414],
     ['measure', 'Measurement', 457],
-    ['modgrind', 'Ad air vent by grinding', 541],
-    ['modmill', 'Ad air vent by milling', 589]
+    ['modgrind', 'Add air vent by grinding', 541],
+    ['modmill', 'Add air vent by milling', 589]
 ];
 
 function drawPage(data) {
@@ -1293,8 +1298,8 @@ function drawPage(data) {
   g.strokeRect(FX + B/2, FY + B/2, FW - B, FH - B);
 
   // --- Request detail ---
-  w = text('Request detail', 940, 179, 26, '#000');
-  g.fillStyle = '#000'; g.fillRect(940, 186, w, 2);
+  w = text('Request detail', 928, 179, 26, '#000');
+  g.fillStyle = '#000'; g.fillRect(928, 186, w, 2);
 
   const diamond = (cx, cy) => { g.fillStyle = '#000'; g.beginPath(); g.moveTo(cx, cy-4); g.lineTo(cx+4, cy); g.lineTo(cx, cy+4); g.lineTo(cx-4, cy); g.closePath(); g.fill(); };
   diamond(944, 198); text('Repair insert', 956, 203, 13, '#000');
@@ -1309,6 +1314,11 @@ function drawPage(data) {
       g.beginPath(); g.moveTo(928, top + 10); g.lineTo(933, top + 16); g.lineTo(941, top + 4); g.stroke();
     }
   });
+
+  // Current drawing index (มุมขวาล่างของกรอบ ใต้รายการ Request detail) ว่างให้เป็นจุดไข่ปลา
+  text('Current drawing index:', 905, 664, 13, '#000');
+  if (data.drawingIndex) value(data.drawingIndex, 1040, 664, 13, 17, 172);
+  else text('………', 1040, 664, 14, '#777');
 
   // --- Footer ---
   text('1', 25, 755, 14, '#999');
@@ -1335,7 +1345,8 @@ function buildPDF() {
     problem,
     req: document.getElementById('requestBy').value.trim(),
     acc: document.getElementById('acceptBy').value.trim(),
-    detail: document.getElementById('requestDetail').value
+    detail: document.getElementById('requestDetail').value,
+    drawingIndex: document.getElementById('drawingIndex').value.trim()
   });
   const { jsPDF } = window.jspdf;
   const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [PW, PH], hotfixes: ['px_scaling'] });
@@ -1409,6 +1420,7 @@ async function buildPPTX() {
   const reqBy = document.getElementById('requestBy').value.trim();
   const accBy = document.getElementById('acceptBy').value.trim();
   const detail = document.getElementById('requestDetail').value;
+  const drawingIndex = document.getElementById('drawingIndex').value.trim();
 
   const pptx = new PptxGenJS();
   pptx.defineLayout({ name: 'REPAIR_A4L', width: pxIn(PW), height: pxIn(PH) });
@@ -1516,7 +1528,7 @@ async function buildPPTX() {
   rectShape(FX + B / 2, FY + B / 2, FW - B, FH - B, '#8e2a8e', B);
 
   // --- Request detail ---
-  text('Request detail', 940, 179, 26, '#000000', { underline: true });
+  text('Request detail', 928, 179, 26, '#000000', { underline: true });
   [[944, 198], [944, 507]].forEach(([cx, cy]) => slide.addShape(SHAPE.diamond, {
     x: pxIn(cx - 4), y: pxIn(cy - 4), w: pxIn(8), h: pxIn(8), fill: { color: '000000' }, line: { type: 'none' }
   }));
@@ -1530,6 +1542,11 @@ async function buildPPTX() {
       lineShape(933, top + 16, 941, top + 4, '#000000', 3);
     }
   });
+
+  // Current drawing index (ตำแหน่งตรงกับ PDF)
+  text('Current drawing index:', 925, 664, 13, '#000000');
+  if (drawingIndex) value(drawingIndex, 925, 688, 13, 17, 172);
+  else text('…………………………', 925, 688, 14, '#777777');
 
   // --- Footer ---
   text('1', 25, 755, 14, '#999999');
@@ -1640,6 +1657,7 @@ if (window.claude) document.getElementById('sendBtn').style.display = 'none';
 function resetForm() {
   document.getElementById('moldNo').value = '';
   document.getElementById('moldModel').value = '';
+  document.getElementById('drawingIndex').value = '';
   document.getElementById('problem').value = '';
   items.forEach(it => it.card.remove());
   items = []; selected = null; frameShapes = []; fcur = null; layoutManual = false;
@@ -1661,6 +1679,7 @@ async function sendToDept() {
         base64: r.pdf.output('datauristring'),
         moldNo: r.moldNo,
         moldModel: document.getElementById('moldModel').value.trim(),
+        drawingIndex: document.getElementById('drawingIndex').value.trim(),
         problem: r.problem,
         reqBy: reqBy,
         filename: r.filename
