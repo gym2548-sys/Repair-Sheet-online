@@ -1130,6 +1130,40 @@ const hitItem = (it, p) => {
   const q = it.rot ? rotAround(p, itemCenter(it), -it.rot) : p;
   return q.x >= it.box.x && q.x <= it.box.x + it.box.w && q.y >= it.box.y && q.y <= it.box.y + boxH(it);
 };
+// ----- แตะ/ลาก รอยวาดที่อยู่บนรูป (วงกลม สี่เหลี่ยม ลูกศร ข้อความ) ได้จากหน้าจัดวางรูปในกรอบโดยตรง -----
+// จุดบนกรอบ -> พิกัด 0-1 บนรูป (คิดการหมุนของรูปแล้ว)
+const toItemNorm = (it, p) => {
+  const q = it.rot ? rotAround(p, itemCenter(it), -it.rot) : p;
+  return { x: (q.x - it.box.x) / it.box.w, y: (q.y - it.box.y) / boxH(it) };
+};
+// พิกเซล canvas ของรูป ต่อ 1 พิกเซลบนหน้าจอ
+const itemK = it => (FRAME_W / (frameCanvas.getBoundingClientRect().width || FRAME_W)) * (it.canvas.width / it.box.w);
+function frameShapeDown(p, e) {
+  const start = (it, sh, mode, np) => {
+    const { W, H } = ownerDims(it), k = itemK(it);
+    startSelDrag(it, sh, mode, np, W, H, k);
+    selected = null;
+    frameCanvas.setPointerCapture(e.pointerId);
+    refreshSelUI(); render(it);
+    return true;
+  };
+  if (selection && selection.owner !== 'frame' && items.includes(selection.owner) && !selection.owner.cropMode) {
+    const it = selection.owner, np = toItemNorm(it, p), { W, H } = ownerDims(it), k = itemK(it);
+    const h = shapeHandles(selection.shape, W, H, k).find(q => Math.hypot(q.x - np.x * W, q.y - np.y * H) <= 18 * k);
+    if (h) return start(it, selection.shape, h.id, np);
+  }
+  const it = items.slice().sort((a, b) => b.z - a.z).find(x => hitItem(x, p));
+  if (!it || it.cropMode) return false;
+  const np = toItemNorm(it, p), { W, H } = ownerDims(it), k = itemK(it), pp = { x: np.x * W, y: np.y * H };
+  for (let i = it.shapes.length - 1; i >= 0; i--) {
+    if (!hitBody(it.shapes[i], pp, W, H, 11 * k)) continue;
+    const prev = selection && selection.owner !== it ? selection.owner : null;
+    selection = { owner: it, shape: it.shapes[i] };
+    if (prev) renderOwner(prev);
+    return start(it, it.shapes[i], 'move', np);
+  }
+  return false;
+}
 const rotHandlePos = it => {
   const c = itemCenter(it), q = rotAround({ x: c.x, y: it.box.y - 36 }, c, it.rot || 0);
   return { x: clamp(q.x, 24, FRAME_W - 24), y: clamp(q.y, 24, FRAME_H - 24) };
@@ -1165,6 +1199,14 @@ function drawFrameImages(g, preview) {
   });
   drawShapes(g, fcur ? frameShapes.concat([fcur]) : frameShapes, 0, 0, FRAME_W, FRAME_H, FRAME_LINE);
   if (preview && fcur && fcur.t === 'arrow') drawSites(g, frameSnapShapes(), 0, 0, FRAME_W, FRAME_H, fsnap, 7);
+  if (preview && frameMode === 'move' && selection && selection.owner !== 'frame' && items.includes(selection.owner) && !selection.owner.cropMode) {
+    const it = selection.owner, h = boxH(it), rot = it.rot || 0;      // กรอบ/จุดจับของรอยวาดที่เลือก (วาดในแกนของรูป)
+    g.save();
+    if (rot) { const cx = it.box.x + it.box.w / 2, cy = it.box.y + h / 2; g.translate(cx, cy); g.rotate(rot); g.translate(-cx, -cy); }
+    g.translate(it.box.x, it.box.y); g.scale(it.box.w / it.canvas.width, h / it.canvas.height);
+    drawSelection(g, it, itemK(it));
+    g.restore();
+  }
   if (preview && frameMode === 'move' && selected) {
     const it = selected, c = itemCenter(it), top = rotAround({ x: c.x, y: it.box.y }, c, it.rot || 0);
     const hp = handlePos(it), rp = rotHandlePos(it);
@@ -1207,7 +1249,7 @@ function setFrameMode(m) {
   frameCanvas.style.cursor = m === 'draw' ? 'crosshair' : 'move';
   document.getElementById('frame-hint').textContent = m === 'draw'
     ? 'เลือกเครื่องมือ/สีด้านบน แล้วลากบนกรอบ (รอยวาดบนกรอบไม่ตามรูป ให้จัดรูปให้เสร็จก่อน)'
-    : 'แตะรูปเพื่อเลือก · ลากย้าย · จุดกลมมุมล่างขวา = ย่อ/ขยาย · จุดกลมสีน้ำเงินด้านบน = หมุน · 2 นิ้วบีบ / ล้อเมาส์ = ซูม (ส่วนที่ล้นกรอบถูกตัดใน PDF) · 2 นิ้วลากเมื่อไม่ได้เลือกรูป = เลื่อนหน้า';
+    : 'แตะรูปเพื่อเลือก · ลากย้าย · แตะที่เส้นวงกลม/สี่เหลี่ยม/ข้อความบนรูป = เลือกแล้วย้าย/ย่อขยาย/หมุนได้ · จุดกลมมุมล่างขวา = ย่อ/ขยาย · จุดกลมสีน้ำเงินด้านบน = หมุน · 2 นิ้วบีบ / ล้อเมาส์ = ซูม (ส่วนที่ล้นกรอบถูกตัดใน PDF) · 2 นิ้วลากเมื่อไม่ได้เลือกรูป = เลื่อนหน้า';
   scheduleFrame();
 }
 document.querySelectorAll('.mode-row .mode').forEach(b => b.addEventListener('click', () => setFrameMode(b.dataset.mode)));
@@ -1269,6 +1311,8 @@ frameCanvas.addEventListener('pointerdown', e => {
       return;
     }
   }
+  if (frameShapeDown(p, e)) return;                 // แตะโดนรอยวาดบนรูป = เลือก/ย้าย/ย่อขยาย/หมุนรอยวาดนั้น
+  if (selection && selection.owner !== 'frame') clearSelection();
   const hit = items.slice().sort((a, b) => b.z - a.z).find(it => hitItem(it, p));
   selected = hit || null;
   if (hit) {
@@ -1293,6 +1337,7 @@ frameCanvas.addEventListener('pointermove', e => {
     return;
   }
   if (selDrag && selDrag.owner === 'frame') { e.preventDefault(); const sp = fpos(e); selMove({ x: sp.x / FRAME_W, y: sp.y / FRAME_H }); scheduleFrame(); return; }
+  if (selDrag && selDrag.owner !== 'frame' && items.includes(selDrag.owner) && fpointers.has(e.pointerId)) { e.preventDefault(); selMove(toItemNorm(selDrag.owner, fpos(e))); render(selDrag.owner); return; }
   if (fdrawing && fcur) {
     e.preventDefault();
     const p = fpos(e);
@@ -1339,6 +1384,7 @@ const endFrameDrag = e => {
     return;
   }
   if (selDrag && selDrag.owner === 'frame') { selDrag = null; scheduleFrame(); }
+  else if (selDrag && items.includes(selDrag.owner) && e && fpointers.size === 0) { const o = selDrag.owner; selDrag = null; render(o); }
   if (fpointers.size < 2) pinch = null;
   drag = null;
   if (fdrawing) {
