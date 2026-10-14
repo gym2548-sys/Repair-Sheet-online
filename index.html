@@ -68,7 +68,6 @@ input[type=text]:focus, select:focus { border-color:#005691; outline:none; }
   .app-container { max-width:1560px; }
   .layout { grid-template-columns: minmax(420px, 500px) 1fr; }
 }
-@media (min-width: 960px) { #sendBtn { margin-top:18px !important; } }
 .crop-bar { display:none; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:6px; padding:6px 8px; background:#fff7e0; border:1px solid #f1d98a; border-radius:6px; }
 .crop-bar.on { display:flex; }
 .crop-bar span { flex:1; font-size:12px; color:#6b5a1a; min-width:140px; }
@@ -293,7 +292,6 @@ input[type=text]:focus, select:focus { border-color:var(--p); background:#fff; }
       </div>
     </div>
   <div class="cta-stack">
-    <button class="cta solid" id="sendBtn" type="button" onclick="sendToDept()"><span class="bl">ส่งเอกสารแจ้งซ่อมเข้าแผนก</span><span class="bi"><i class="ic" data-ic="arrowur"></i></span></button>
     <button class="cta soft" id="submitBtn" type="button" onclick="generatePDF()"><span class="bl">สร้างเอกสาร PDF (ดาวน์โหลด)</span><span class="bi"><i class="ic" data-ic="download"></i></span></button>
     <button class="cta soft" id="pptxBtn" type="button" onclick="generatePPTX()"><span class="bl">บันทึกเป็นไฟล์ PowerPoint (.pptx)</span><span class="bi"><i class="ic" data-ic="slides"></i></span></button>
     <button class="cta soft" id="shareBtn" type="button" onclick="sharePDF()"><span class="bl">แชร์ไฟล์ PDF (แนบไฟล์ส่งเมล)</span><span class="bi"><i class="ic" data-ic="share"></i></span></button>
@@ -1147,6 +1145,28 @@ function frameShapeDown(p, e) {
     refreshSelUI(); render(it);
     return true;
   };
+  // รอยวาดที่วาดบนกรอบเอง (ข้อความ/วงกลม/สี่เหลี่ยม/ลูกศรบนกรอบ): เลือก/ย้าย/ย่อขยาย/หมุนได้ในโหมดเดียวกันนี้
+  {
+    const kF = FRAME_W / (frameCanvas.getBoundingClientRect().width || FRAME_W), np = { x: p.x / FRAME_W, y: p.y / FRAME_H };
+    const startF = (sh, mode) => {
+      startSelDrag('frame', sh, mode, np, FRAME_W, FRAME_H, kF);
+      selected = null;
+      frameCanvas.setPointerCapture(e.pointerId);
+      refreshSelUI(); scheduleFrame();
+      return true;
+    };
+    if (selection && selection.owner === 'frame') {
+      const h = shapeHandles(selection.shape, FRAME_W, FRAME_H, kF).find(q => Math.hypot(q.x - p.x, q.y - p.y) <= 18 * kF);
+      if (h) return startF(selection.shape, h.id);
+    }
+    for (let i = frameShapes.length - 1; i >= 0; i--) {
+      if (!hitBody(frameShapes[i], p, FRAME_W, FRAME_H, 11 * kF)) continue;
+      const prev = selection && selection.owner !== 'frame' ? selection.owner : null;
+      selection = { owner: 'frame', shape: frameShapes[i] };
+      if (prev) renderOwner(prev);
+      return startF(frameShapes[i], 'move');
+    }
+  }
   if (selection && selection.owner !== 'frame' && items.includes(selection.owner) && !selection.owner.cropMode) {
     const it = selection.owner, np = toItemNorm(it, p), { W, H } = ownerDims(it), k = itemK(it);
     const h = shapeHandles(selection.shape, W, H, k).find(q => Math.hypot(q.x - np.x * W, q.y - np.y * H) <= 18 * k);
@@ -1233,7 +1253,7 @@ function drawFrameImages(g, preview) {
 function drawFrame() {
   fctx.fillStyle = '#fff'; fctx.fillRect(0, 0, FRAME_W, FRAME_H);
   drawFrameImages(fctx, true);
-  if (frameMode === 'draw') drawSelection(fctx, 'frame', FRAME_W / (frameCanvas.getBoundingClientRect().width || FRAME_W));
+  drawSelection(fctx, 'frame', FRAME_W / (frameCanvas.getBoundingClientRect().width || FRAME_W));
 }
 function scheduleFrame() {
   if (rafPending) return;
@@ -1244,12 +1264,11 @@ function scheduleFrame() {
 function setFrameMode(m) {
   frameMode = m;
   fcur = null; fdrawing = false; drag = null;
-  if (m !== 'draw' && selection && selection.owner === 'frame') { selection = null; selDrag = null; refreshSelUI(); }
   document.querySelectorAll('.mode-row .mode').forEach(b => b.classList.toggle('active', b.dataset.mode === m));
   frameCanvas.style.cursor = m === 'draw' ? 'crosshair' : 'move';
   document.getElementById('frame-hint').textContent = m === 'draw'
     ? 'เลือกเครื่องมือ/สีด้านบน แล้วลากบนกรอบ (รอยวาดบนกรอบไม่ตามรูป ให้จัดรูปให้เสร็จก่อน)'
-    : 'แตะรูปเพื่อเลือก · ลากย้าย · แตะที่เส้นวงกลม/สี่เหลี่ยม/ข้อความบนรูป = เลือกแล้วย้าย/ย่อขยาย/หมุนได้ · จุดกลมมุมล่างขวา = ย่อ/ขยาย · จุดกลมสีน้ำเงินด้านบน = หมุน · 2 นิ้วบีบ / ล้อเมาส์ = ซูม (ส่วนที่ล้นกรอบถูกตัดใน PDF) · 2 นิ้วลากเมื่อไม่ได้เลือกรูป = เลื่อนหน้า';
+    : 'แตะรูปเพื่อเลือก · ลากย้าย · แตะที่เส้นวงกลม/สี่เหลี่ยม/ลูกศร/ข้อความ (ทั้งบนรูปและที่วาดบนกรอบ) = เลือกแล้วย้าย/ย่อขยาย/หมุนได้ · จุดกลมมุมล่างขวา = ย่อ/ขยาย · จุดกลมสีน้ำเงินด้านบน = หมุน · 2 นิ้วบีบ / ล้อเมาส์ = ซูม (ส่วนที่ล้นกรอบถูกตัดใน PDF) · 2 นิ้วลากเมื่อไม่ได้เลือกรูป = เลื่อนหน้า';
   scheduleFrame();
 }
 document.querySelectorAll('.mode-row .mode').forEach(b => b.addEventListener('click', () => setFrameMode(b.dataset.mode)));
@@ -1312,7 +1331,7 @@ frameCanvas.addEventListener('pointerdown', e => {
     }
   }
   if (frameShapeDown(p, e)) return;                 // แตะโดนรอยวาดบนรูป = เลือก/ย้าย/ย่อขยาย/หมุนรอยวาดนั้น
-  if (selection && selection.owner !== 'frame') clearSelection();
+  if (selection) clearSelection();
   const hit = items.slice().sort((a, b) => b.z - a.z).find(it => hitItem(it, p));
   selected = hit || null;
   if (hit) {
@@ -1911,56 +1930,6 @@ async function sharePDF() {
     hint.style.display = 'block';
   } catch (err) {
     reportError(err);
-  } finally {
-    setIdle(btn);
-  }
-}
-
-/* ============ ส่งเข้าแผนกผ่าน Google Apps Script ============ */
-// ปลายทางรับเอกสาร: เปลี่ยนเป็น HTTP POST URL ของ Power Automate (ดูคู่มือ) ห้ามใส่ความลับอื่นในไฟล์นี้ เพราะใครเปิดแอปก็ดูโค้ดได้
-const WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbzDGuRzbeIVjWRQe4XJ5kjtVVigXX9QuLFTid3LvZj-FChX4N_QXBlcKDIXUulvHU1f/exec';
-
-// หน้า claude.ai บล็อกการส่งข้อมูลออกนอกเว็บ จึงซ่อนปุ่มนี้ไว้ในหน้านั้น (ใช้ได้เมื่อวางไฟล์บนเว็บของบริษัท/GitHub Pages)
-if (window.claude) document.getElementById('sendBtn').style.display = 'none';
-
-function resetForm() {
-  document.getElementById('moldNo').value = '';
-  document.getElementById('moldModel').value = '';
-  document.getElementById('drawingIndex').value = '';
-  document.getElementById('problem').value = '';
-  items.forEach(it => it.card.remove());
-  items = []; selected = null; frameShapes = []; fcur = null;
-  document.getElementById('mail-hint').style.display = 'none';
-  refreshUI();
-  scheduleFrame();
-}
-
-async function sendToDept() {
-  const btn = document.getElementById('sendBtn');
-  setBusy(btn, 'กำลังส่งข้อมูลเข้าแผนก โปรดรอ...');
-  try {
-    const r = buildPDF();
-    const reqBy = document.getElementById('requestBy').value.trim();
-    const resp = await fetch(WEBHOOK_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({
-        base64: r.pdf.output('datauristring'),
-        moldNo: r.moldNo,
-        moldModel: document.getElementById('moldModel').value.trim(),
-        drawingIndex: document.getElementById('drawingIndex').value.trim(),
-        problem: r.problem,
-        reqBy: reqBy,
-        filename: r.filename
-      })
-    });
-    await resp.text();
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    alert('ส่งเอกสารแจ้งซ่อมเข้าแผนกสำเร็จ!');
-    resetForm();   // ล้างหน้าจอเตรียมให้ช่างคนต่อไปใช้งาน
-  } catch (err) {
-    console.error(err);
-    alert('เกิดข้อผิดพลาดในการส่ง กรุณาลองใหม่\n(ถ้าเปิดจากหน้า claude.ai จะส่งออกนอกเว็บไม่ได้ ต้องเปิดจากไฟล์ที่วางบนเว็บของบริษัท)');
   } finally {
     setIdle(btn);
   }
