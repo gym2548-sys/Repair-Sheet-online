@@ -295,6 +295,7 @@ input[type=text]:focus, select:focus { border-color:var(--p); background:#fff; }
     <button class="cta soft" id="submitBtn" type="button" onclick="generatePDF()"><span class="bl">สร้างเอกสาร PDF (ดาวน์โหลด)</span><span class="bi"><i class="ic" data-ic="download"></i></span></button>
     <button class="cta soft" id="pptxBtn" type="button" onclick="generatePPTX()"><span class="bl">บันทึกเป็นไฟล์ PowerPoint (.pptx)</span><span class="bi"><i class="ic" data-ic="slides"></i></span></button>
     <button class="cta soft" id="shareBtn" type="button" onclick="sharePDF()"><span class="bl">แชร์ไฟล์ PDF (แนบไฟล์ส่งเมล)</span><span class="bi"><i class="ic" data-ic="share"></i></span></button>
+    <button class="cta soft" id="pptxShareBtn" type="button" onclick="sharePPTX()"><span class="bl">แชร์ไฟล์ PowerPoint (แนบไฟล์ส่งเมล)</span><span class="bi"><i class="ic" data-ic="share"></i></span></button>
   </div>
   <div id="mail-hint"></div>
   </div><!-- /col-right -->
@@ -1859,9 +1860,13 @@ async function buildPPTX() {
   };
 }
 
-async function savePPTX(r) {
+const PPTX_MIME = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+async function pptxBlob(r) {
   const out = await r.pptx.write({ outputType: 'blob' });
-  const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' });
+  return new Blob([out], { type: PPTX_MIME });
+}
+async function savePPTX(r, blobIn) {
+  const blob = blobIn || await pptxBlob(r);
   let dl = null;
   try { if (window.claude && window.claude.use) dl = await window.claude.use('downloads'); } catch (e) {}
   if (dl) { await dl.save({ filename: r.filename, data: blob }); return; }
@@ -1882,17 +1887,18 @@ async function generatePPTX() {
 /* ============ แชร์ / ส่งอีเมล ============ */
 const MAIL_TO = 'mfh2hmj@bosch.com';
 
-function mailParts() {
+function mailParts(kind) {
+  kind = kind || 'PDF';
   const mold = document.getElementById('moldNo').value.trim();
   const problem = document.getElementById('problem').value.trim();
   return {
     mold, problem,
     subject: 'แจ้งซ่อม Mold ' + (mold || '-') + (problem ? ' : ' + problem : ''),
-    body: 'เรียนผู้เกี่ยวข้อง\n\nแจ้งซ่อม Mold: ' + (mold || '-') + '\nปัญหา: ' + (problem || '-') + '\n\nแนบไฟล์ PDF ตามเอกสารแนบ'
+    body: 'เรียนผู้เกี่ยวข้อง\n\nแจ้งซ่อม Mold: ' + (mold || '-') + '\nปัญหา: ' + (problem || '-') + '\n\nแนบไฟล์ ' + kind + ' ตามเอกสารแนบ'
   };
 }
-function mailHref() {
-  const m = mailParts();
+function mailHref(kind) {
+  const m = mailParts(kind);
   return 'mailto:' + MAIL_TO + '?subject=' + encodeURIComponent(m.subject) + '&body=' + encodeURIComponent(m.body);
 }
 function openMail() {
@@ -1927,6 +1933,42 @@ async function sharePDF() {
     await savePDF(r);
     const href = mailHref();
     hint.innerHTML = 'บันทึกไฟล์ <b>' + r.filename + '</b> แล้ว<br>กดปุ่มด้านล่างเพื่อเปิดอีเมลถึง ' + MAIL_TO + ' แล้วแนบไฟล์ PDF ที่เพิ่งบันทึก<br><a href="' + href + '" target="_top">เปิดอีเมล →</a>';
+    hint.style.display = 'block';
+  } catch (err) {
+    reportError(err);
+  } finally {
+    setIdle(btn);
+  }
+}
+
+async function sharePPTX() {
+  const btn = document.getElementById('pptxShareBtn');
+  const hint = document.getElementById('mail-hint');
+  hint.style.display = 'none';
+  setBusy(btn, 'กำลังสร้างไฟล์ PowerPoint โปรดรอ...');
+
+  try {
+    const r = await buildPPTX();
+    const blob = await pptxBlob(r);
+    const m = mailParts('PowerPoint');
+    const body = 'ส่งถึง: ' + MAIL_TO + '\n\nแจ้งซ่อม Mold: ' + (r.moldNo || '-') + '\nปัญหา: ' + (m.problem || '-');
+    const file = new File([blob], r.filename, { type: PPTX_MIME });
+
+    // 1) แชร์ไฟล์ตรงๆ ผ่านเมนูแชร์ของมือถือ (เลือก Mail / Outlook / LINE ได้)
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: m.subject, text: body });
+        return;
+      } catch (err) {
+        if (err && err.name === 'AbortError') return;   // ผู้ใช้กดยกเลิก
+        // ถ้าแชร์ไม่ได้ ให้ใช้วิธีสำรองด้านล่าง
+      }
+    }
+
+    // 2) วิธีสำรอง: บันทึก PowerPoint แล้วเปิดอีเมลที่กรอกหัวข้อ/เนื้อหาไว้ให้ (ต้องแนบไฟล์เอง)
+    await savePPTX(r, blob);
+    const href = mailHref('PowerPoint');
+    hint.innerHTML = 'บันทึกไฟล์ <b>' + r.filename + '</b> แล้ว<br>กดปุ่มด้านล่างเพื่อเปิดอีเมลถึง ' + MAIL_TO + ' แล้วแนบไฟล์ PowerPoint ที่เพิ่งบันทึก<br><a href="' + href + '" target="_top">เปิดอีเมล →</a>';
     hint.style.display = 'block';
   } catch (err) {
     reportError(err);
