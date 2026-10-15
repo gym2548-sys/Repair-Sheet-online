@@ -287,6 +287,10 @@ details.howto ul { margin:8px 0 2px; padding-left:18px; line-height:1.6; }
 #toolbar .tg.acts { margin-left:auto; gap:8px; }
 #toolbar .tg.acts .lockbtn { margin-left:0; }
 #undoBtn:disabled { opacity:.4; cursor:not-allowed; }
+#draftbar { display:none; align-items:center; justify-content:space-between; gap:8px; margin:-6px 4px 12px; font-size:12px; color:var(--mute); }
+#draftbar.on { display:flex; }
+#draftbar .dm { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#draftbar.warn .dm { color:#b26a00; font-weight:600; white-space:normal; }
 </style>
 </head>
 <body>
@@ -300,6 +304,7 @@ details.howto ul { margin:8px 0 2px; padding-left:18px; line-height:1.6; }
     <button class="st" type="button" data-go="step3"><b>3</b><span>จัดหน้า</span></button>
     <button class="st" type="button" data-go="step4"><b>4</b><span>บันทึก/ส่ง</span></button>
   </nav>
+  <div id="draftbar"><span class="dm" id="draftmsg"></span><button type="button" class="mini link" id="draftNew">เริ่มใบใหม่</button></div>
 
   <div class="layout">
   <div class="col-left">
@@ -2314,6 +2319,266 @@ document.addEventListener('keydown', e => {
   }
 });
 histSnap = histTake(); histSig = histSigOf(); updateUndoBtn();
+
+/* ============ บันทึกร่างอัตโนมัติ (Autosave) ============
+   เก็บสิ่งที่กรอก + รูป + รอยวาด + ตำแหน่งรูปในกรอบ ไว้ "ในเครื่องนี้เท่านั้น" (ไม่ส่งออกไปไหน)
+   ถ้าเบราว์เซอร์รีโหลดหน้าหรือปิดแอปตอนไปถ่ายรูป กลับมาแล้วข้อมูลยังอยู่ — ล้างได้ด้วยปุ่ม "เริ่มใบใหม่"
+   ข้อความ → localStorage (เขียนทันที) · รูปและรอยวาด → IndexedDB (รูปเขียนครั้งเดียวต่อรูป หลังจากนั้นเขียนเฉพาะรายละเอียดเล็กๆ) */
+const DRAFT_LS = 'repairSheetDraft.v1', DRAFT_DB = 'repairSheetDraft', DRAFT_STORE = 'kv';
+const DRAFT_FIELDS = ['moldNo', 'moldModel', 'problem', 'requestBy', 'acceptBy', 'requestDetail', 'drawingIndex'];
+let draftOK = true, idbOK = true, draftSig = '', draftPrev = '', draftSaving = false, draftRestoring = false;
+let draftTime = 0, draftMsg = 'saved', draftUids = [], draftDbp = null;
+
+function idbOpen() {
+  if (draftDbp) return draftDbp;
+  draftDbp = new Promise((resolve, reject) => {
+    if (!window.indexedDB) { reject(new Error('no indexedDB')); return; }
+    const rq = indexedDB.open(DRAFT_DB, 1);
+    rq.onupgradeneeded = () => rq.result.createObjectStore(DRAFT_STORE);
+    rq.onsuccess = () => { rq.result.onversionchange = () => { rq.result.close(); draftDbp = null; }; resolve(rq.result); };
+    rq.onerror = () => reject(rq.error || new Error('idb open'));
+    rq.onblocked = () => reject(new Error('idb blocked'));
+  });
+  draftDbp.catch(() => { draftDbp = null; });
+  return draftDbp;
+}
+// fn(store) คืนค่า request เดียว หรืออาร์เรย์ของ request → ได้ผลลัพธ์กลับมาเมื่อ transaction เสร็จ
+function idbRun(mode, fn) {
+  return idbOpen().then(db => new Promise((resolve, reject) => {
+    let out;
+    const tx = db.transaction(DRAFT_STORE, mode);
+    try { out = fn(tx.objectStore(DRAFT_STORE)); } catch (e) { reject(e); return; }
+    tx.oncomplete = () => resolve(Array.isArray(out) ? out.map(r => r.result) : (out && out.result));
+    tx.onerror = () => reject(tx.error || new Error('idb error'));
+    tx.onabort = () => reject(tx.error || new Error('idb abort'));
+  }));
+}
+
+const newUid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const blobToBuf = b => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(r.error); r.readAsArrayBuffer(b); });
+// รูปต้นฉบับ (orig) ไม่เปลี่ยนตลอดการแก้ไข (ครอบตัดเก็บเป็นพิกัดแยกต่างหาก) → เก็บเป็น JPEG ครั้งเดียวต่อรูป
+async function itemImgBuf(it) {
+  const src = it.orig, c = document.createElement('canvas');
+  c.width = src.width; c.height = src.height;
+  const g = c.getContext('2d');
+  g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(src, 0, 0);
+  const blob = await new Promise((res, rej) => c.toBlob(b => b ? res(b) : rej(new Error('toBlob')), 'image/jpeg', 0.92));
+  return { buf: await blobToBuf(blob), type: 'image/jpeg' };
+}
+function bufToCanvas(im) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(new Blob([im.buf], { type: im.type || 'image/jpeg' }));
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = img.naturalWidth; c.height = img.naturalHeight;
+      c.getContext('2d').drawImage(img, 0, 0);
+      URL.revokeObjectURL(url); resolve(c);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('img')); };
+    img.src = url;
+  });
+}
+
+// รอยวาดทุกชุด (รูปแต่ละรูป + กรอบ) → ข้อมูลล้วนๆ ที่เก็บได้ โดยลิงก์ลูกศร (la/lb) เปลี่ยนเป็นเลขลำดับรูปทรง
+function packShapes(lists) {
+  const ids = new Map(); let n = 0;
+  lists.forEach(l => l.forEach(s => ids.set(s, n++)));
+  const lk = l => (l && ids.has(l.sh)) ? { sid: ids.get(l.sh), k: l.k, item: l.item ? items.indexOf(l.item) : -1 } : null;
+  return lists.map(l => l.map(s => {
+    const o = { sid: ids.get(s) };
+    Object.keys(s).forEach(key => {
+      if (key === 'la' || key === 'lb' || key[0] === '_') return;
+      const v = s[key];
+      if (v === undefined || typeof v === 'function') return;
+      o[key] = (v && typeof v === 'object') ? JSON.parse(JSON.stringify(v)) : v;
+    });
+    if (s.la) o.la = lk(s.la);
+    if (s.lb) o.lb = lk(s.lb);
+    return o;
+  }));
+}
+function unpackShapes(packed, itemAt) {
+  const byId = new Map();
+  const lists = packed.map(l => l.map(o => {
+    const s = {};
+    Object.keys(o).forEach(k => { if (k !== 'la' && k !== 'lb' && k !== 'sid') s[k] = o[k]; });
+    byId.set(o.sid, s);
+    return s;
+  }));
+  packed.forEach((l, li) => l.forEach((o, i) => ['la', 'lb'].forEach(key => {
+    const lk = o[key]; if (!lk) return;
+    const t = byId.get(lk.sid);
+    if (!t || (lk.item >= 0 && !itemAt[lk.item])) return;
+    const link = { sh: t, k: lk.k };
+    if (lk.item >= 0) link.item = itemAt[lk.item];
+    lists[li][i][key] = link;
+  })));
+  return lists;
+}
+
+const draftFields = () => { const f = {}; DRAFT_FIELDS.forEach(id => { f[id] = $id(id).value; }); return f; };
+const jobContent = () => items.length > 0 || ['moldNo', 'moldModel', 'problem', 'drawingIndex'].some(id => $id(id).value.trim());
+function draftSigNow() {
+  try { return JSON.stringify([draftFields(), histSigOf(), items.map(it => it.z)]); } catch (e) { return ''; }
+}
+
+function updateDraftBar() {
+  const bar = $id('draftbar'), msg = $id('draftmsg');
+  bar.classList.toggle('on', jobContent());
+  bar.classList.toggle('warn', !draftOK);
+  if (!draftOK) { msg.textContent = '⚠ เบราว์เซอร์นี้บันทึกร่างอัตโนมัติไม่ได้ — อย่ารีเฟรชหรือปิดหน้านี้'; return; }
+  const d = new Date(draftTime || Date.now());
+  const tm = d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+  if (draftMsg === 'restored') {
+    const day = d.toDateString() === new Date().toDateString() ? '' : d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }) + ' ';
+    msg.textContent = 'กู้คืนร่างที่บันทึกไว้เมื่อ ' + day + tm;
+  } else {
+    msg.textContent = '✓ บันทึกร่างอัตโนมัติแล้ว ' + tm + (idbOK ? '' : ' (เฉพาะข้อความ)');
+  }
+}
+
+async function draftSave() {
+  if (draftSaving || draftRestoring || !draftOK) return;
+  draftSaving = true;
+  const sig = draftSigNow();                   // จดสถานะก่อนเริ่ม: ถ้าระหว่างบันทึกมีการแก้ต่อ รอบถัดไปจะบันทึกซ้ำให้เอง
+  try {
+    const fields = draftFields();
+    let lsOK = true;
+    try { localStorage.setItem(DRAFT_LS, JSON.stringify({ savedAt: Date.now(), fields })); } catch (e) { lsOK = false; }
+    let saved = false;
+    if (idbOK) {
+      try {
+        const lists = packShapes(items.map(it => it.shapes).concat([frameShapes]));
+        const cur = items.map((it, i) => ({
+          it, uid: it._uid || (it._uid = newUid()),
+          crop: { ...it.crop }, rot: it.rot || 0, box: { ...it.box }, z: it.z || 0, shapes: lists[i]
+        }));
+        const frame = lists[lists.length - 1];
+        const fresh = [];
+        for (const c of cur) if (!c.it._draftSaved) fresh.push([c, await itemImgBuf(c.it)]);
+        const meta = {
+          v: 1, savedAt: Date.now(), fields, z: zc, uids: cur.map(c => c.uid), frame,
+          items: cur.map(c => ({ uid: c.uid, crop: c.crop, rot: c.rot, box: c.box, z: c.z, shapes: c.shapes }))
+        };
+        const gone = draftUids.filter(u => !meta.uids.includes(u));
+        await idbRun('readwrite', s => {
+          fresh.forEach(([c, im]) => s.put(im, 'img:' + c.uid));
+          gone.forEach(u => s.delete('img:' + u));
+          return [s.put(meta, 'meta')];
+        });
+        fresh.forEach(([c]) => { c.it._draftSaved = true; });
+        draftUids = meta.uids.slice();
+        draftTime = meta.savedAt; saved = true;
+      } catch (e) { console.warn('draft: IndexedDB ใช้ไม่ได้', e); idbOK = false; }
+    }
+    if (!saved) { if (lsOK) draftTime = Date.now(); else draftOK = false; }
+    draftSig = sig; draftMsg = 'saved';
+  } catch (e) { console.warn('draft', e); draftOK = false; }
+  draftSaving = false;
+  updateDraftBar();
+}
+
+// เรียกทุก 1 วินาที: บันทึกเมื่อมีการเปลี่ยนแปลงและนิ่งแล้ว (ไม่เขียนระหว่างกำลังลาก/ครอบตัด)
+function draftTick() {
+  if (!draftOK || draftRestoring || draftSaving || histPointers > 0 || items.some(it => it.cropMode)) return;
+  const sig = draftSigNow();
+  if (sig !== draftSig && sig === draftPrev) draftSave();
+  draftPrev = sig;
+}
+// ออกจากหน้า/สลับไปแอปอื่น (เช่นเปิดกล้อง) → บันทึกทันที ไม่รอรอบ
+function draftFlush() {
+  if (!draftOK) return;
+  try { localStorage.setItem(DRAFT_LS, JSON.stringify({ savedAt: Date.now(), fields: draftFields() })); } catch (e) {}
+  if (!draftRestoring && !draftSaving && draftSigNow() !== draftSig) draftSave();
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') draftFlush(); });
+window.addEventListener('pagehide', draftFlush);
+// เตือนก่อนปิดหน้า "เฉพาะ" กรณีเบราว์เซอร์นี้บันทึกร่างไม่ได้ (ถ้าบันทึกได้ ไม่ต้องเตือน)
+window.addEventListener('beforeunload', e => { if (!draftOK && jobContent()) { e.preventDefault(); e.returnValue = ''; } });
+
+async function draftInit() {
+  let meta = null, imgs = [];
+  try {
+    meta = await idbRun('readonly', s => s.get('meta'));
+    if (meta && meta.items && meta.items.length) imgs = await idbRun('readonly', s => meta.items.map(d => s.get('img:' + d.uid)));
+  } catch (e) { idbOK = false; meta = null; }
+
+  let fields = meta && meta.fields, savedAt = meta && meta.savedAt;
+  try {                                                    // ข้อความที่ใหม่กว่า (บันทึกตอนสลับแอป) ใช้ตัวนี้
+    const j = JSON.parse(localStorage.getItem(DRAFT_LS) || 'null');
+    if (j && j.fields && (!meta || j.savedAt >= meta.savedAt)) { fields = j.fields; savedAt = j.savedAt; }
+  } catch (e) {}
+
+  if (fields || (meta && meta.items && meta.items.length)) {
+    draftRestoring = true;
+    try {
+      if (fields) DRAFT_FIELDS.forEach(id => { if (fields[id] != null) $id(id).value = fields[id]; });
+      let lost = 0;
+      if (meta && meta.items && meta.items.length) {
+        const itemAt = [];                                 // ลำดับรูปเดิม -> รูปที่กู้คืนได้
+        for (let i = 0; i < meta.items.length && i < MAX_IMAGES; i++) {
+          const d = meta.items[i], im = imgs[i];
+          if (!im) { lost++; continue; }
+          try {
+            const orig = await bufToCanvas(im);
+            createItem(orig);
+            const it = items[items.length - 1];
+            it._uid = d.uid; it._draftSaved = true;
+            it.crop = { ...d.crop };
+            const c = it.crop;
+            if (c.x > 1e-4 || c.y > 1e-4 || c.w < 0.9999 || c.h < 0.9999) {     // สร้างรูปที่ครอบตัดแล้วแบบเดียวกับ applyCrop
+              const ow = orig.width, oh = orig.height, cw = Math.max(1, Math.round(ow * c.w)), ch = Math.max(1, Math.round(oh * c.h));
+              const k = document.createElement('canvas'); k.width = cw; k.height = ch;
+              k.getContext('2d').drawImage(orig, ow * c.x, oh * c.y, ow * c.w, oh * c.h, 0, 0, cw, ch);
+              it.src = k;
+            }
+            it.rot = d.rot || 0; it.box = { ...d.box }; it.z = d.z;
+            it.canvas.height = Math.round(it.canvas.width * it.src.height / it.src.width);
+            itemAt[i] = it;
+          } catch (e) { lost++; }
+        }
+        const lists = unpackShapes(meta.items.map(d => d.shapes || []).concat([meta.frame || []]), itemAt);
+        itemAt.forEach((it, i) => { if (it) it.shapes = lists[i]; });
+        frameShapes = lists[lists.length - 1];
+        zc = Math.max(zc, meta.z || 0, ...items.map(it => it.z || 0));
+        draftUids = items.map(it => it._uid);
+        items.forEach(it => render(it));
+      }
+      refreshUI(); scheduleFrame();
+      undoStack.length = 0; histSnap = histTake(); histSig = histSigOf(); updateUndoBtn();   // การกู้คืนไม่นับเป็นขั้นที่ย้อนได้
+      if (jobContent()) {
+        draftTime = savedAt || Date.now(); draftMsg = 'restored';
+        toast(lost ? 'กู้คืนร่างแล้ว (รูปกู้คืนไม่ได้ ' + lost + ' รูป)' : 'กู้คืนร่างที่ค้างไว้แล้ว', 4000);
+      }
+    } finally { draftRestoring = false; }
+  }
+  draftSig = draftSigNow(); draftPrev = draftSig;
+  updateDraftBar();
+  setInterval(draftTick, 1000);
+}
+
+// เริ่มใบใหม่: ล้างข้อมูลงาน รูป และรอยวาด (ชื่อผู้แจ้ง/ผู้รับคงไว้ เพราะเป็นคนเดิมกรอกซ้ำๆ)
+function newSheet() {
+  if (!confirm('เริ่มใบใหม่?\nข้อมูล รูป และรอยวาดของใบนี้จะถูกล้างทั้งหมด (ชื่อผู้แจ้ง/ผู้รับยังอยู่)')) return;
+  ['moldNo', 'moldModel', 'problem', 'drawingIndex'].forEach(id => { $id(id).value = ''; });
+  $id('requestDetail').selectedIndex = 0;
+  document.querySelectorAll('.field-err').forEach(el => el.classList.remove('field-err'));
+  items.forEach(it => it.card.remove());
+  items = []; frameShapes = [];
+  selected = null; selection = null; selDrag = null; drag = null; pinch = null;
+  fcur = null; fdrawing = false; fsnap = null; ftextPos = null; fsnapLink = null;
+  refreshSelUI();
+  $id('mail-hint').style.display = 'none';
+  undoStack.length = 0; histSnap = histTake(); histSig = histSigOf(); updateUndoBtn();
+  refreshUI(); scheduleFrame();
+  draftSig = ''; draftMsg = 'saved';
+  draftSave();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  toast('เริ่มใบใหม่แล้ว');
+}
+$id('draftNew').addEventListener('click', newSheet);
+draftInit();
 
 hydrateIcons();
 refreshUI();
