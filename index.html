@@ -2059,7 +2059,7 @@ async function generatePPTX() {
 }
 
 /* ============ แชร์ / ส่งอีเมล ============ */
-const MAIL_TO = 'mfh2hmj@bosch.com';
+const MAIL_TO = '';
 
 function mailParts(kind) {
   kind = kind || 'PDF';
@@ -2089,7 +2089,7 @@ async function sharePDF() {
 
   try {
     const r = buildPDF();
-    const body = 'ส่งถึง: ' + MAIL_TO + '\n\nแจ้งซ่อม Mold: ' + (r.moldNo || '-') + '\nปัญหา: ' + (r.problem || '-');
+    const body = 'แจ้งซ่อม Mold: ' + (r.moldNo || '-') + '\nปัญหา: ' + (r.problem || '-');
     const file = new File([r.pdf.output('blob')], r.filename, { type: 'application/pdf' });
 
     // 1) แชร์ไฟล์ตรงๆ ผ่านเมนูแชร์ของมือถือ (เลือก Mail / Outlook / LINE ได้)
