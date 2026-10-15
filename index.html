@@ -284,6 +284,9 @@ details.howto ul { margin:8px 0 2px; padding-left:18px; line-height:1.6; }
   .col-right { top:78px; max-height:calc(100vh - 94px); }
   .step { scroll-margin-top:80px; }
 }
+#toolbar .tg.acts { margin-left:auto; gap:8px; }
+#toolbar .tg.acts .lockbtn { margin-left:0; }
+#undoBtn:disabled { opacity:.4; cursor:not-allowed; }
 </style>
 </head>
 <body>
@@ -370,7 +373,10 @@ details.howto ul { margin:8px 0 2px; padding-left:18px; line-height:1.6; }
         <span class="dot" data-col="#FFD400" style="background:#FFD400" title="เหลือง"></span>
         <span class="dot" data-col="#1E6CFF" style="background:#1E6CFF" title="น้ำเงิน"></span>
       </div>
-      <button class="lockbtn" id="scrollLockBtn" type="button" title="เปิดแล้วลากนิ้วบนรูปเพื่อเลื่อนหน้าได้ (วาด/ย้ายชั่วคราวไม่ได้)"><i class="ic" data-ic="updown"></i><span class="lbl"> เลื่อนหน้า</span></button>
+      <div class="tg acts">
+        <button class="lockbtn" id="undoBtn" type="button" title="ย้อนกลับ 1 ขั้น (Ctrl+Z) — ย้อนได้ทั้งการวาด ย้าย หมุน ย่อขยาย ครอบตัด และการเพิ่ม/ลบรูป" onclick="undo()" disabled><i class="ic" data-ic="undo"></i><span class="lbl"> ย้อนกลับ</span></button>
+        <button class="lockbtn" id="scrollLockBtn" type="button" title="เปิดแล้วลากนิ้วบนรูปเพื่อเลื่อนหน้าได้ (วาด/ย้ายชั่วคราวไม่ได้)"><i class="ic" data-ic="updown"></i><span class="lbl"> เลื่อนหน้า</span></button>
+      </div>
     </div>
     <div id="selbar">
       <span id="selinfo" class="grow">เลือกอยู่</span>
@@ -422,7 +428,6 @@ details.howto ul { margin:8px 0 2px; padding-left:18px; line-height:1.6; }
       <div class="frame-tools">
         <span id="frame-hint"></span>
         <span class="acts">
-          <button class="mini icon" type="button" title="ย้อนกลับ" onclick="frameUndo()"><i class="ic" data-ic="undo"></i></button>
           <button class="mini link" type="button" onclick="frameClear()">ล้างที่วาดทับ</button>
         </span>
       </div>
@@ -624,7 +629,6 @@ function createItem(src) {
   card.innerHTML =
     '<div class="img-head"><b class="t"></b><span class="btns">' +
     '<button class="mini" data-act="crop"><i class="ic" data-ic="crop"></i>ครอบตัด</button>' +
-    '<button class="mini icon" data-act="undo" title="ย้อน"><i class="ic" data-ic="undo"></i></button>' +
     '<button class="mini link" data-act="clear" title="ลบที่วาดไว้บนรูปนี้ทั้งหมด">ล้างที่วาด</button>' +
     '<button class="mini danger icon" data-act="del" title="ลบรูป"><i class="ic" data-ic="trash"></i></button></span></div>' +
     '<div class="crop-bar"><span>ลากกรอบ/มุมเพื่อเลือกส่วนที่ต้องการเก็บไว้</span>' +
@@ -706,7 +710,6 @@ function createItem(src) {
     if (act === 'crop-cancel') exitCrop(item);
     if (act === 'crop-reset') { item.cropRect = { x:0, y:0, w:1, h:1 }; render(item); }
     if (item.cropMode) return;
-    if (act === 'undo') { const last = item.shapes[item.shapes.length - 1]; if (last) removeShape(item, last); render(item); }
     if (act === 'clear') {
       item.shapes.forEach(sh => detachLinksTo(l => l.sh === sh));
       item.shapes = []; item.current = null;
@@ -1440,7 +1443,6 @@ function setFrameMode(m) {
   scheduleFrame();
 }
 document.querySelectorAll('.mode-row .mode').forEach(b => b.addEventListener('click', () => setFrameMode(b.dataset.mode)));
-function frameUndo() { const last = frameShapes[frameShapes.length - 1]; if (last) removeShape('frame', last); scheduleFrame(); }
 function frameClear() { if (frameShapes.length && !confirm('ลบรอยวาดบนกรอบทั้งหมด?')) return; frameShapes.forEach(sh => detachLinksTo(l => l.sh === sh)); frameShapes = []; if (selection && selection.owner === 'frame') { selection = null; refreshSelUI(); } scheduleFrame(); }
 setFrameMode('move');
 
@@ -2219,6 +2221,99 @@ $id('dlg-go').addEventListener('click', () => {
 $id('dlg-skip').addEventListener('click', () => { closeDlg(); const f = dlgFn; dlgFn = null; if (f) f(); });
 $id('dlg').addEventListener('click', e => { if (e.target === $id('dlg')) closeDlg(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDlg(); });
+
+
+/* ============ ย้อนกลับ (Undo) ปุ่มเดียวทั้งหน้า ============
+   เก็บภาพสถานะก่อนหน้าไว้ทุกครั้งที่มีการเปลี่ยนแปลง (วาด/ย้าย/ย่อขยาย/หมุน/แก้ข้อความ/ลบ/ครอบตัด/เพิ่ม-ลบรูป)
+   แล้วกดปุ่มย้อนกลับเพื่อถอยทีละขั้น (ลากต่อเนื่อง 1 ครั้ง = 1 ขั้น) */
+let histSeq = 0, histPointers = 0, histSnap = null, histSig = '';
+const undoStack = [], UNDO_MAX = 60;
+const hid = o => o._id || (o._id = ++histSeq);
+
+function histSigOf() {
+  const lk = l => (l ? [l.k, hid(l.sh), l.item ? hid(l.item) : 0] : 0);
+  const sh = s => [s.t, hid(s), s.c, s.s, s.z, s.r, s.a ? [s.a.x, s.a.y] : 0, s.b ? [s.b.x, s.b.y] : 0, s.pts ? s.pts.length : 0, lk(s.la), lk(s.lb)];
+  return JSON.stringify([
+    items.map(it => [hid(it), it.shapes.map(sh), it.box || 0, it.rot || 0, it.crop, it.src.width, it.src.height]),
+    frameShapes.map(sh)
+  ]);
+}
+// ก๊อปรายการรูปทรงหลายชุดพร้อมกัน แล้วต่อลิงก์ลูกศร (la/lb) ให้ชี้ไปที่สำเนาชุดเดียวกัน
+function cloneLists(lists) {
+  const map = new Map();
+  const out = lists.map(list => list.map(sh => {
+    const c = { ...sh };
+    if (sh.a) c.a = { ...sh.a };
+    if (sh.b) c.b = { ...sh.b };
+    if (sh.pts) c.pts = sh.pts.map(q => ({ ...q }));
+    c._id = hid(sh);
+    map.set(sh, c);
+    return c;
+  }));
+  out.forEach(list => list.forEach(c => ['la', 'lb'].forEach(key => {
+    const l = c[key]; if (!l) return;
+    const t = map.get(l.sh);
+    c[key] = t ? { ...l, sh: t } : null;
+  })));
+  return out;
+}
+function histTake() {
+  const cl = cloneLists(items.map(it => it.shapes).concat([frameShapes]));
+  return {
+    items: items.map((it, i) => ({ it, shapes: cl[i], box: { ...it.box }, rot: it.rot || 0, z: it.z, crop: { ...it.crop }, src: it.src })),
+    frame: cl[cl.length - 1]
+  };
+}
+function histRestore(snap) {
+  const cl = cloneLists(snap.items.map(x => x.shapes).concat([snap.frame]));
+  const keep = new Set(snap.items.map(x => x.it));
+  items.forEach(it => { if (!keep.has(it)) it.card.remove(); });          // รูปที่เพิ่มทีหลังถูกเอาออก
+  snap.items.forEach((x, i) => {
+    const it = x.it;
+    it.shapes = cl[i]; it.box = { ...x.box }; it.rot = x.rot; it.z = x.z; it.crop = { ...x.crop }; it.src = x.src; it.current = null;
+    it.canvas.height = Math.round(it.canvas.width * it.src.height / it.src.width);
+  });
+  items = snap.items.map(x => x.it);
+  frameShapes = cl[cl.length - 1];
+  items.forEach(it => listEl.appendChild(it.card));                        // คืนรูปที่เคยลบ และเรียงลำดับการ์ดให้ตรงเดิม
+  selection = null; selDrag = null; fcur = null; fdrawing = false; drag = null; pinch = null;
+  if (selected && !items.includes(selected)) selected = null;
+  refreshSelUI(); refreshUI();
+  items.forEach(it => render(it));
+  scheduleFrame();
+}
+function updateUndoBtn() {
+  const b = document.getElementById('undoBtn');
+  if (b) b.disabled = !undoStack.length;
+}
+function histTick() {
+  if (histPointers > 0 || items.some(it => it.cropMode)) return;
+  let sg; try { sg = histSigOf(); } catch (e) { return; }
+  if (sg === histSig) return;
+  if (histSnap) { undoStack.push(histSnap); if (undoStack.length > UNDO_MAX) undoStack.shift(); }
+  histSnap = histTake(); histSig = sg;
+  updateUndoBtn();
+}
+function undo() {
+  if (items.some(it => it.cropMode)) { alert('กรุณากด "ใช้" หรือ "ยกเลิก" ในการครอบตัดก่อน แล้วค่อยย้อนกลับ'); return; }
+  histPointers = 0; histTick();                                             // บันทึกการเปลี่ยนแปลงล่าสุดที่ยังไม่ถูกจดก่อน
+  const snap = undoStack.pop();
+  if (!snap) return;
+  histRestore(snap);
+  histSnap = histTake(); histSig = histSigOf();
+  updateUndoBtn();
+}
+document.addEventListener('pointerdown', () => { histPointers++; }, true);
+['pointerup', 'pointercancel'].forEach(t => document.addEventListener(t, () => { histPointers = Math.max(0, histPointers - 1); setTimeout(histTick, 40); }, true));
+document.addEventListener('click', () => setTimeout(histTick, 40), true);
+window.addEventListener('blur', () => { histPointers = 0; });
+setInterval(histTick, 350);
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z' && !/^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement || {}).tagName || '')) {
+    e.preventDefault(); undo();
+  }
+});
+histSnap = histTake(); histSig = histSigOf(); updateUndoBtn();
 
 hydrateIcons();
 refreshUI();
