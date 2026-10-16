@@ -2159,7 +2159,7 @@ async function sharePPTX() {
     const r = await buildPPTX();
     const blob = await pptxBlob(r);
     const m = mailParts('PowerPoint');
-    const body = 'ส่งถึง: ' + MAIL_TO + '\n\nแจ้งซ่อม Mold: ' + (r.moldNo || '-') + '\nปัญหา: ' + (m.problem || '-');
+    const body = 'แจ้งซ่อม Mold: ' + (r.moldNo || '-') + '\nปัญหา: ' + (m.problem || '-');
     const file = new File([blob], r.filename, { type: PPTX_MIME });
 
     // 1) แชร์ไฟล์ตรงๆ ผ่านเมนูแชร์ของมือถือ (เลือก Mail / Outlook / LINE ได้)
