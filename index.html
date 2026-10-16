@@ -2714,8 +2714,8 @@ async function draftInit() {
 
 // เริ่มใบใหม่: ล้างข้อมูลงาน รูป และรอยวาด (ชื่อผู้แจ้ง/ผู้รับคงไว้ เพราะเป็นคนเดิมกรอกซ้ำๆ)
 function newSheet() {
-  if (!confirm('เริ่มใบใหม่?\nข้อมูล รูป และรอยวาดของใบนี้จะถูกล้างทั้งหมด (ชื่อผู้แจ้ง/ผู้รับยังอยู่)')) return;
-  ['moldNo', 'moldModel', 'problem', 'drawingIndex'].forEach(id => { $id(id).value = ''; });
+  if (!confirm('เริ่มใบใหม่?\nรูป และรอยวาดของใบนี้จะถูกล้างทั้งหมด (/Mold No./Mold Model/ชื่อผู้แจ้ง)')) return;
+  ['problem', 'drawingIndex'].forEach(id => { $id(id).value = ''; });
   $id('requestDetail').selectedIndex = 0;
   document.querySelectorAll('.field-err').forEach(el => el.classList.remove('field-err'));
   items.forEach(it => it.card.remove());
