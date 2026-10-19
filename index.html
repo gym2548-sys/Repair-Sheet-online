@@ -1657,6 +1657,34 @@ const DETAIL_ROWS = [
     ['modmill', 'Add air vent by milling', 589]
 ];
 
+// ส่วนหัว: Mold No และ Mold Model อยู่บรรทัดเดียวกัน (Mold Model อยู่ตำแหน่งเดิม ก่อนถึง Request by), Problem อยู่บรรทัดล่าง
+// ข้อความที่กรอกมีขนาดเท่ากับหัวข้อของตัวเอง: Mold No / Problem / Mold Model = 24px
+// (ถ้ายาวจนใส่ไม่พอจึงย่อลงอัตโนมัติ ไม่เล็กกว่า 14px — Mold No กับ Problem ย่อพร้อมกันเพื่อให้ขนาดเท่ากัน)
+// Mold Model เลื่อนไปทางขวาเฉพาะตอนที่ Mold No ยาวจนชนตำแหน่งเดิม
+// ใช้ร่วมกันทั้ง PDF และ PPTX
+const HEAD = { x: 62, big: 24, small: 24, ul: 4, gap: 10, mmMinX: 300, mmLimit: 757, pLimit: 1095, baseTop: 62, baseProblem: 112, minSize: 14 };
+function headerLayout(mold, model, problem) {
+  const m = (t, size) => { measureCtx.font = size + 'px ' + FONT; return measureCtx.measureText(t).width; };
+  const wNo = m('Mold No:', HEAD.big), wMM = m('Mold Model:', HEAD.small), wPr = m('Problem :', HEAD.big);
+  const noX = HEAD.x + wNo + HEAD.gap, prX = HEAD.x + wPr + HEAD.gap;
+  // เผื่อที่ให้ Mold Model (หัวข้อ + ค่าที่กรอก ไม่เกิน 120px — ถ้ายาวกว่านั้น Mold Model ย่อเอง ไม่ไปบีบ Mold No)
+  const mmValW = model ? m(model, HEAD.small) : m('.........', 16);
+  const need = wMM + 8 + Math.min(mmValW, 120);
+  const noMax = HEAD.mmLimit - need - 24 - noX, prMax = HEAD.pLimit - prX;
+  let size = HEAD.big;
+  [[mold, noMax], [problem, prMax]].forEach(([v, mx]) => {
+    if (!v) return;
+    let s = HEAD.big;
+    for (; s > HEAD.minSize; s--) { if (m(v, s) <= mx) break; }
+    size = Math.min(size, s);
+  });
+  const noEnd = noX + (mold ? m(mold, size) : m(PLACEHOLDER, 16));
+  const mmX = Math.max(HEAD.mmMinX, noEnd + 24), mmVX = mmX + wMM + 8;
+  let mmSize = HEAD.small;
+  if (model) for (; mmSize > HEAD.minSize; mmSize--) { if (m(model, mmSize) <= HEAD.mmLimit - mmVX) break; }
+  return { size, wNo, wMM, wPr, noX, prX, mmX, mmVX, mmSize };
+}
+
 function drawPage(data) {
   const pc = document.createElement('canvas');
   pc.width = PW * S; pc.height = PH * S;
@@ -1682,28 +1710,28 @@ function drawPage(data) {
     return text(v, x, y, size, color);
   };
 
-  // --- Mold No / Problem ---
-  let w = text('Mold No:', 62, 69, 38, '#000');
-  g.fillStyle = '#000'; g.fillRect(62, 80, w, 2);
-  value(data.mold, 62 + w + 10, 69, 16, 32, 468 - (62 + w + 10));
+  // --- Mold No / Mold Model / Problem (ข้อความที่กรอกขนาดเท่ากับหัวข้อของมัน) ---
+  const H = headerLayout(data.mold, data.moldModel, data.problem);
+  text('Mold No:', HEAD.x, HEAD.baseTop, HEAD.big, '#000');
+  g.fillStyle = '#000'; g.fillRect(HEAD.x, HEAD.baseTop + HEAD.ul, H.wNo, 2);
+  if (data.mold) text(data.mold, H.noX, HEAD.baseTop, H.size, '#000');
+  else text(PLACEHOLDER, H.noX, HEAD.baseTop, 16, '#777');
 
-  // Mold Model อยู่ระหว่าง Mold No กับ Request by (บรรทัดเดียวกัน)
-  const mmX = 484;
-  const mmW = text('Mold Model:', mmX, 69, 24, '#000');
-  g.fillStyle = '#000'; g.fillRect(mmX, 80, mmW, 2);
-  const mmVX = mmX + mmW + 8;
-  if (data.moldModel) value(data.moldModel, mmVX, 69, 16, 26, 757 - mmVX);
-  else text('.........', mmVX, 69, 16, '#777');
+  text('Mold Model:', H.mmX, HEAD.baseTop, HEAD.small, '#000');
+  g.fillStyle = '#000'; g.fillRect(H.mmX, HEAD.baseTop + HEAD.ul, H.wMM, 2);
+  if (data.moldModel) text(data.moldModel, H.mmVX, HEAD.baseTop, H.mmSize, '#000');
+  else text('.........', H.mmVX, HEAD.baseTop, 16, '#777');
 
-  w = text('Problem :', 62, 136, 38, '#7a1f7a');
-  g.fillStyle = '#7a1f7a'; g.fillRect(62, 147, w, 2);
-  value(data.problem, 62 + w + 10, 136, 16, 32, 1095 - (62 + w + 10), '#7a1f7a');
+  text('Problem :', HEAD.x, HEAD.baseProblem, HEAD.big, '#7a1f7a');
+  g.fillStyle = '#7a1f7a'; g.fillRect(HEAD.x, HEAD.baseProblem + HEAD.ul, H.wPr, 2);
+  if (data.problem) text(data.problem, H.prX, HEAD.baseProblem, H.size, '#7a1f7a');
+  else text(PLACEHOLDER, H.prX, HEAD.baseProblem, 16, '#777');
 
   // --- Request by / Accept by ---
-  w = text('Request by:', 765, 51, 20, '#000');
-  value(data.req, 765 + w + 6, 51, 15, 24, 1095 - (765 + w + 6));
-  w = text('Accept by:', 765, 91, 20, '#000');
-  value(data.acc, 765 + w + 6, 91, 15, 24, 1095 - (765 + w + 6));
+  let w = text('Request by:', 765, 58, 16, '#000');
+  value(data.req, 765 + w + 6, 58, 16, 16, 1095 - (765 + w + 6));
+  w = text('Accept by:', 765, 98, 16, '#000');
+  value(data.acc, 765 + w + 6, 98, 16, 16, 1095 - (765 + w + 6));
 
   // --- กรอบสีม่วง + รูปภาพตามที่จัดวางไว้ ---
   const FX = 27, FY = 160, FW = 864, FH = 535, B = 3;
@@ -1896,24 +1924,26 @@ async function buildPPTX() {
     line: Object.assign({ color: hex6(color), width: pxPt(lw) }, arrow ? { endArrowType: 'triangle' } : {})
   });
 
-  // --- Mold No / Mold Model / Problem ---
-  let w = text('Mold No:', 62, 69, 38, '#000000', { underline: true });
-  value(moldNo, 62 + w + 10, 69, 16, 32, 468 - (62 + w + 10));
+  // --- Mold No / Mold Model / Problem (ข้อความที่กรอกขนาดเท่ากับหัวข้อของมัน — ตรงกับ PDF) ---
+  const H = headerLayout(moldNo, moldModel, problem);
+  const face = v => hasThai(v) ? 'Tahoma' : 'Arial';
+  text('Mold No:', HEAD.x, HEAD.baseTop, HEAD.big, '#000000', { underline: true });
+  if (moldNo) text(moldNo, H.noX, HEAD.baseTop, H.size, '#000000', { face: face(moldNo), w: H.mmX - H.noX - 8 });
+  else text(PLACEHOLDER, H.noX, HEAD.baseTop, 16, '#777777');
 
-  const mmX = 484;
-  const mmW = text('Mold Model:', mmX, 69, 24, '#000000', { underline: true });
-  const mmVX = mmX + mmW + 8;
-  if (moldModel) value(moldModel, mmVX, 69, 16, 26, 757 - mmVX);
-  else text('.........', mmVX, 69, 16, '#777777');
+  text('Mold Model:', H.mmX, HEAD.baseTop, HEAD.small, '#000000', { underline: true });
+  if (moldModel) text(moldModel, H.mmVX, HEAD.baseTop, H.mmSize, '#000000', { face: face(moldModel), w: HEAD.mmLimit - H.mmVX });
+  else text('.........', H.mmVX, HEAD.baseTop, 16, '#777777');
 
-  w = text('Problem :', 62, 136, 38, '#7a1f7a', { underline: true });
-  value(problem, 62 + w + 10, 136, 16, 32, 1095 - (62 + w + 10), '#7a1f7a');
+  text('Problem :', HEAD.x, HEAD.baseProblem, HEAD.big, '#7a1f7a', { underline: true });
+  if (problem) text(problem, H.prX, HEAD.baseProblem, H.size, '#7a1f7a', { face: face(problem), w: HEAD.pLimit - H.prX });
+  else text(PLACEHOLDER, H.prX, HEAD.baseProblem, 16, '#777777');
 
   // --- Request by / Accept by ---
-  w = text('Request by:', 765, 51, 20, '#000000');
-  value(reqBy, 765 + w + 6, 51, 15, 24, 1095 - (765 + w + 6));
-  w = text('Accept by:', 765, 91, 20, '#000000');
-  value(accBy, 765 + w + 6, 91, 15, 24, 1095 - (765 + w + 6));
+  let w = text('Request by:', 765, 58, 16, '#000000');
+  value(reqBy, 765 + w + 6, 58, 16, 16, 1095 - (765 + w + 6));
+  w = text('Accept by:', 765, 98, 16, '#000000');
+  value(accBy, 765 + w + 6, 98, 16, 16, 1095 - (765 + w + 6));
 
   // --- รูปถ่ายในกรอบสีม่วง + รอยวาด (พิกัดต้องตรงกับ drawPage) ---
   const FX = 27, FY = 160, FW = 864, FH = 535, B = 3;
@@ -2041,9 +2071,9 @@ async function buildPPTX() {
   });
 
   // Current drawing index (ตำแหน่งตรงกับ PDF)
-  text('Current drawing index:', 925, 664, 13, '#000000');
-  if (drawingIndex) value(drawingIndex, 925, 688, 13, 17, 172);
-  else text('…………………………', 925, 688, 14, '#777777');
+  text('Current drawing index:', 905, 664, 13, '#000000');
+  if (drawingIndex) value(drawingIndex, 1040, 664, 13, 17, 1110 - 1040);
+  else text('………', 1040, 664, 14, '#777777');
 
   // --- Footer ---
   text('1', 25, 755, 14, '#999999');
