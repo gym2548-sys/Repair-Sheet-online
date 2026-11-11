@@ -521,6 +521,15 @@ body.rs-open { overflow:hidden; }
   #rs .rs-bottom { padding-left:12px; padding-right:12px; }
   #rs .rs-bottom .cta .lg { display:none; }
 }
+
+/* Position / Index / Qty แบบเพิ่มแถวได้ (1–6) */
+#rs .rs-prow3 { display:grid; grid-template-columns:minmax(0,3fr) minmax(0,2fr) minmax(0,2fr) 40px; gap:6px; margin-bottom:8px; align-items:center; }
+#rs .rs-prow3 .rs-in { min-width:0; padding:8px; }
+#rs .rs-del { width:40px; height:40px; border:2px solid #dfe4ff; background:#fff; color:var(--err); border-radius:12px; font-size:22px; line-height:1; cursor:pointer; padding:0; }
+#rs .rs-del:active { background:var(--pl2); }
+#rsPosList.single .rs-del { visibility:hidden; }
+#rsPosAdd { margin-top:2px; }
+#rsPosAdd[disabled] { opacity:.45; }
 </style>
 </head>
 <body>
@@ -688,6 +697,7 @@ body.rs-open { overflow:hidden; }
       <div class="og-row">
         <button class="act" id="submitBtn" type="button" onclick="guard(generatePDF)"><span class="bi"><i class="ic" data-ic="download"></i></span><span class="at"><span class="bl">PDF</span><small>ดาวน์โหลด</small></span></button>
         <button class="act" id="pptxBtn" type="button" onclick="guard(generatePPTX)"><span class="bi"><i class="ic" data-ic="slides"></i></span><span class="at"><span class="bl">PowerPoint</span><small>ดาวน์โหลด</small></span></button>
+        <button class="act" id="rsPdfBtn" type="button" style="display:none;grid-column:1/-1" onclick="guard(generateRsPDF)"><span class="bi"><i class="ic" data-ic="download"></i></span><span class="at"><span class="bl">เฉพาะ Request Sheet (PDF)</span><small>ดาวน์โหลดเฉพาะใบ Request Sheet</small></span></button>
       </div>
     </div>
     <div class="og">
@@ -808,24 +818,48 @@ body.rs-open { overflow:hidden; }
           <div class="rs-ro" id="rsMoldNo"></div>
         </div>
         <div class="rs-f">
-          <label for="rsIdx">Index <span class="req">*</span></label>
-          <input type="text" class="rs-in" id="rsIdx" placeholder="พิมพ์ Index" autocomplete="off">
-        </div>
-        <div class="rs-f">
-          <label>Position / Qty</label>
-          <div class="rs-hint">มี 3 แถว แถวละ 2 ฝั่ง (ซ้าย/ขวา) — กรอกกี่ช่องก็ได้ ไม่บังคับ</div>
-        <div class="rs-prow">
-          <div class="rs-pair"><input type="text" class="rs-in" id="rsPos11" placeholder="Position" autocomplete="off"><input type="text" class="rs-in" id="rsQty11" placeholder="Qty" autocomplete="off" inputmode="numeric"></div>
-          <div class="rs-pair"><input type="text" class="rs-in" id="rsPos12" placeholder="Position" autocomplete="off"><input type="text" class="rs-in" id="rsQty12" placeholder="Qty" autocomplete="off" inputmode="numeric"></div>
-        </div>
-        <div class="rs-prow">
-          <div class="rs-pair"><input type="text" class="rs-in" id="rsPos21" placeholder="Position" autocomplete="off"><input type="text" class="rs-in" id="rsQty21" placeholder="Qty" autocomplete="off" inputmode="numeric"></div>
-          <div class="rs-pair"><input type="text" class="rs-in" id="rsPos22" placeholder="Position" autocomplete="off"><input type="text" class="rs-in" id="rsQty22" placeholder="Qty" autocomplete="off" inputmode="numeric"></div>
-        </div>
-        <div class="rs-prow">
-          <div class="rs-pair"><input type="text" class="rs-in" id="rsPos31" placeholder="Position" autocomplete="off"><input type="text" class="rs-in" id="rsQty31" placeholder="Qty" autocomplete="off" inputmode="numeric"></div>
-          <div class="rs-pair"><input type="text" class="rs-in" id="rsPos32" placeholder="Position" autocomplete="off"><input type="text" class="rs-in" id="rsQty32" placeholder="Qty" autocomplete="off" inputmode="numeric"></div>
-        </div>
+          <label>Position / Index / Qty <span class="th">(เพิ่มได้สูงสุด 6 รายการ)</span></label>
+          <div class="rs-hint">ในใบจะพิมพ์เป็น Position_Index เช่น P111_C แล้วตามด้วย Qty — ช่อง Index ของใบใส่ “-” ให้เอง</div>
+          <div id="rsPosList">
+          <div class="rs-prow3" data-i="1">
+            <input type="text" class="rs-in" id="rsP1" placeholder="Position" autocomplete="off">
+            <input type="text" class="rs-in" id="rsI1" placeholder="Index" autocomplete="off">
+            <input type="text" class="rs-in" id="rsQ1" placeholder="Qty" autocomplete="off" inputmode="numeric">
+            <button type="button" class="rs-del" data-i="1" title="ลบรายการนี้" aria-label="ลบรายการนี้">×</button>
+          </div>
+          <div class="rs-prow3" data-i="2" style="display:none">
+            <input type="text" class="rs-in" id="rsP2" placeholder="Position" autocomplete="off">
+            <input type="text" class="rs-in" id="rsI2" placeholder="Index" autocomplete="off">
+            <input type="text" class="rs-in" id="rsQ2" placeholder="Qty" autocomplete="off" inputmode="numeric">
+            <button type="button" class="rs-del" data-i="2" title="ลบรายการนี้" aria-label="ลบรายการนี้">×</button>
+          </div>
+          <div class="rs-prow3" data-i="3" style="display:none">
+            <input type="text" class="rs-in" id="rsP3" placeholder="Position" autocomplete="off">
+            <input type="text" class="rs-in" id="rsI3" placeholder="Index" autocomplete="off">
+            <input type="text" class="rs-in" id="rsQ3" placeholder="Qty" autocomplete="off" inputmode="numeric">
+            <button type="button" class="rs-del" data-i="3" title="ลบรายการนี้" aria-label="ลบรายการนี้">×</button>
+          </div>
+          <div class="rs-prow3" data-i="4" style="display:none">
+            <input type="text" class="rs-in" id="rsP4" placeholder="Position" autocomplete="off">
+            <input type="text" class="rs-in" id="rsI4" placeholder="Index" autocomplete="off">
+            <input type="text" class="rs-in" id="rsQ4" placeholder="Qty" autocomplete="off" inputmode="numeric">
+            <button type="button" class="rs-del" data-i="4" title="ลบรายการนี้" aria-label="ลบรายการนี้">×</button>
+          </div>
+          <div class="rs-prow3" data-i="5" style="display:none">
+            <input type="text" class="rs-in" id="rsP5" placeholder="Position" autocomplete="off">
+            <input type="text" class="rs-in" id="rsI5" placeholder="Index" autocomplete="off">
+            <input type="text" class="rs-in" id="rsQ5" placeholder="Qty" autocomplete="off" inputmode="numeric">
+            <button type="button" class="rs-del" data-i="5" title="ลบรายการนี้" aria-label="ลบรายการนี้">×</button>
+          </div>
+          <div class="rs-prow3" data-i="6" style="display:none">
+            <input type="text" class="rs-in" id="rsP6" placeholder="Position" autocomplete="off">
+            <input type="text" class="rs-in" id="rsI6" placeholder="Index" autocomplete="off">
+            <input type="text" class="rs-in" id="rsQ6" placeholder="Qty" autocomplete="off" inputmode="numeric">
+            <button type="button" class="rs-del" data-i="6" title="ลบรายการนี้" aria-label="ลบรายการนี้">×</button>
+          </div>
+          </div>
+          <input type="hidden" id="rsPosN">
+          <button type="button" class="mini outline" id="rsPosAdd">+ เพิ่ม Position</button>
         </div>
       </div>
 
@@ -2207,6 +2241,21 @@ async function generatePDF() {
   setIdle(btn);
 }
 
+// บันทึกเฉพาะ Request Sheet (Letter แนวตั้ง 1 หน้า)
+function buildRsPDF() {
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: [816, 1056], hotfixes: ['px_scaling'] });
+  pdf.addImage(drawRequestSheet(rsData()).toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, 816, 1056);
+  const moldNo = document.getElementById('moldNo').value.trim();
+  return { pdf, filename: 'Request_Sheet_' + (moldNo || 'Blank').replace(/[\\/:*?"<>|\s]+/g, '_') + '.pdf' };
+}
+async function generateRsPDF() {
+  const btn = document.getElementById('rsPdfBtn');
+  setBusy(btn, 'กำลังสร้าง...');
+  try { const r = buildRsPDF(); await savePDF(r); toast('✓ สร้างไฟล์ ' + r.filename + ' แล้ว (ดูในโฟลเดอร์ดาวน์โหลด)', 4000); } catch (err) { reportError(err); }
+  setIdle(btn);
+}
+
 /* ============ บันทึกเป็น PowerPoint (.pptx) แบบแก้ไขได้ ============ */
 // 1 สไลด์ขนาดเท่าหน้า PDF (1122x792 px ที่ 96 dpi) แปลงทุกอย่างเป็นวัตถุของ PowerPoint:
 // ข้อความ = กล่องข้อความ, กรอบ/ช่องติ๊ก/วงกลม/สี่เหลี่ยม/ลูกศร = รูปทรง, รูปถ่าย = รูปภาพแยกชิ้น → คลิกย้าย/แก้ไขได้ทุกชิ้น
@@ -2879,7 +2928,7 @@ syncTouchClass();
    ข้อความ → localStorage (เขียนทันที) · รูปและรอยวาด → IndexedDB (รูปเขียนครั้งเดียวต่อรูป หลังจากนั้นเขียนเฉพาะรายละเอียดเล็กๆ) */
 const DRAFT_LS = 'repairSheetDraft.v1', DRAFT_DB = 'repairSheetDraft', DRAFT_STORE = 'kv';
 const DRAFT_FIELDS = ['moldNo', 'moldModel', 'problem', 'requestBy', 'acceptBy', 'requestDetail', 'drawingIndex',
-  'rsMode', 'rsSap', 'rsIdx', 'rsFeature', 'rsFeatureOther', 'rsLine', 'rsLineOther', 'rsReqDate', 'rsTargetDate', 'rsFinishDate', 'rsInsp', 'rsSide', 'rsProdName', 'rsProdNo', 'rsPos11', 'rsQty11', 'rsPos12', 'rsQty12', 'rsPos21', 'rsQty21', 'rsPos22', 'rsQty22', 'rsPos31', 'rsQty31', 'rsPos32', 'rsQty32', 'rsPartName', 'rsPartQty', 'rsWorkDesc'];
+  'rsMode', 'rsSap', 'rsFeature', 'rsFeatureOther', 'rsLine', 'rsLineOther', 'rsReqDate', 'rsTargetDate', 'rsFinishDate', 'rsInsp', 'rsSide', 'rsProdName', 'rsProdNo', 'rsPosN', 'rsP1', 'rsI1', 'rsQ1', 'rsP2', 'rsI2', 'rsQ2', 'rsP3', 'rsI3', 'rsQ3', 'rsP4', 'rsI4', 'rsQ4', 'rsP5', 'rsI5', 'rsQ5', 'rsP6', 'rsI6', 'rsQ6', 'rsPartName', 'rsPartQty', 'rsWorkDesc'];
 let draftOK = true, idbOK = true, draftSig = '', draftPrev = '', draftSaving = false, draftRestoring = false;
 let draftTime = 0, draftMsg = 'saved', draftUids = [], draftDbp = null;
 
@@ -3510,9 +3559,41 @@ function rsRenderAuto(elId, srcId, label, fn) {
   }
 }
 
+
+/* ---------- Position / Index / Qty: เริ่ม 1 แถว เพิ่มได้ถึง 6 ---------- */
+const RS_POS_MAX = 6;
+function rsPosCount() { return Math.min(RS_POS_MAX, Math.max(1, parseInt($id('rsPosN').value, 10) || 1)); }
+function rsRenderPos() {
+  const n = rsPosCount();
+  document.querySelectorAll('#rsPosList .rs-prow3').forEach(el => { el.style.display = (+el.dataset.i <= n) ? '' : 'none'; });
+  $id('rsPosList').classList.toggle('single', n === 1);
+  const add = $id('rsPosAdd');
+  add.disabled = n >= RS_POS_MAX;
+  add.textContent = n >= RS_POS_MAX ? 'ครบ 6 รายการแล้ว' : '+ เพิ่ม Position (' + n + '/' + RS_POS_MAX + ')';
+}
+$id('rsPosAdd').addEventListener('click', () => {
+  const n = rsPosCount(); if (n >= RS_POS_MAX) return;
+  $id('rsPosN').value = String(n + 1); rsSync();
+  $id('rsP' + (n + 1)).focus({ preventScroll: false });
+});
+document.querySelectorAll('#rsPosList .rs-del').forEach(btn => btn.addEventListener('click', () => {
+  const k = +btn.dataset.i, n = rsPosCount(); if (n <= 1) return;
+  for (let j = k; j < n; j++) ['rsP', 'rsI', 'rsQ'].forEach(p => { $id(p + j).value = $id(p + (j + 1)).value; });   // เลื่อนรายการถัดไปขึ้นมาแทน
+  ['rsP', 'rsI', 'rsQ'].forEach(p => { $id(p + n).value = ''; });
+  $id('rsPosN').value = String(n - 1); rsSync();
+}));
+
 // ข้อมูลทั้งหมดที่ใช้วาดใบ Request Sheet
 function rsData() {
-  const pos = [1, 2, 3].map(r => [rsVal('rsPos' + r + '1'), rsVal('rsQty' + r + '1'), rsVal('rsPos' + r + '2'), rsVal('rsQty' + r + '2')]);
+  // รายการ Position/Index/Qty (1–6) → ลงช่องในใบทีละช่อง ซ้าย→ขวา แถวบน→ล่าง; Position แสดงเป็น P111_C
+  const pos = [['', '', '', ''], ['', '', '', ''], ['', '', '', '']];
+  let k = 0;
+  for (let n = 1; n <= rsPosCount(); n++) {
+    const p = rsVal('rsP' + n), i = rsVal('rsI' + n), q = rsVal('rsQ' + n);
+    if (!p && !i && !q) continue;
+    const r = k >> 1, c = (k & 1) * 2; k++;
+    pos[r][c] = p + (i ? (p ? '_' : '') + i : ''); pos[r][c + 1] = q;
+  }
   return {
     features: rsArr('rsFeature'), featureOther: rsVal('rsFeatureOther'),
     sap: rsVal('rsSap'), requestor: rsVal('requestBy'), dept: 'TEF21',
@@ -3520,7 +3601,7 @@ function rsData() {
     reqDate: rsFmtDate($id('rsReqDate').value), targetDate: rsFmtDate($id('rsTargetDate').value), finishDate: rsFmtDate($id('rsFinishDate').value),
     inspection: rsArr('rsInsp'),
     side: rsSideVal(), prodName: rsVal('rsProdName'), prodNo: rsVal('rsProdNo'),
-    model: rsModelShort(rsVal('moldModel')), moldNo: rsVal('moldNo'), index: rsVal('rsIdx'), pos,
+    model: rsModelShort(rsVal('moldModel')), moldNo: rsVal('moldNo'), index: '-', pos,
     partName: rsVal('rsPartName'), partQty: rsVal('rsPartQty'), workDesc: rsVal('rsWorkDesc')
   };
 }
@@ -3541,6 +3622,7 @@ function rsRenderSummary() {
   $id('rsNo').classList.toggle('sel', mode === 'no');
   $id('rsYes').classList.toggle('sel', mode === 'yes');
   box.classList.toggle('on', mode === 'yes');
+  $id('rsPdfBtn').style.display = mode === 'yes' ? '' : 'none';
   $id('ogNoteSave').textContent = mode === 'yes' ? 'ใบแจ้งซ่อม + Request Sheet รวมในไฟล์เดียว' : '';
   $id('ogNoteMail').textContent = mode === 'yes' ? 'แนบไฟล์เดียว (ใบแจ้งซ่อม + Request Sheet)' : 'เปิดเมนูแชร์พร้อมแนบไฟล์ให้';
   if (mode !== 'yes') { box.innerHTML = ''; return; }
@@ -3585,6 +3667,7 @@ function rsSync() {
   const sv = rsSideVal();
   $id('rsMoldSec').classList.toggle('on', sv === 'mold');
   $id('rsOtherSec').classList.toggle('on', sv === 'other');
+  rsRenderPos();
   rsRenderSummary();
 }
 
