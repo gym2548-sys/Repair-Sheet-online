@@ -3117,9 +3117,11 @@ function drawRequestSheet(d) {
     ['Repair Mold insert', 'Urgent new mold insert', 'New spare part ( Inventory )', 'Measurement analysis'],
     ['Mold Relocation', 'New mold', 'Fixture / Gauge design', 'Other']
   ];
-  const featLines = n => n === 'New spare part ( Inventory )' ? ['New spare part', '( Inventory )'] : [n];   // ยาวเกินช่อง → ขึ้น 2 บรรทัด
+  const INV = 'New spare part ( Inventory )';
   // ความกว้างแต่ละคอลัมน์ = ข้อความที่ยาวสุดของคอลัมน์นั้น (แถวบน/ล่างตรงกัน) แล้วเว้นระยะเท่าๆ กัน ไม่ให้ชนช่องติ๊กถัดไป
-  const featW = [0, 1, 2, 3].map(c => Math.max.apply(null, FEAT_ROWS.map(r => Math.max.apply(null, featLines(r[c]).map(s => W(s, 14, true))))));
+  // ยกเว้น Inventory ที่ยาวเกินช่อง → ไม่นับเป็นตัวกำหนดความกว้าง แต่ย่อขนาดตัวอักษรให้พอดีคอลัมน์ (บรรทัดเดียว)
+  const featW = [0, 1, 2, 3].map(c => Math.max.apply(null, FEAT_ROWS.map(r => r[c] === INV ? 0 : W(r[c], 14, true))));
+  const invPx = Math.min(14, 14 * featW[2] / W(INV, 14, true));
   const featX = []; let fxx = 98;
   featW.forEach(w => { featX.push(fxx); fxx += 23 + w + 10; });
   FEAT_ROWS.forEach((row, ri) => row.forEach((name, c) => {
@@ -3131,8 +3133,7 @@ function drawRequestSheet(d) {
       if (t) fitT(t, lx + ow + 6, y, 694 - (lx + ow + 6) - 6, { px: 14, bold: false });
       else T('..........................', lx + ow, y, { px: 14, bold: true });
     } else {
-      const ls = featLines(name);
-      ls.forEach((s, i) => T(s, x + 23, y + (i - (ls.length - 1) / 2) * 13, { px: 14, bold: true }));
+      T(name, x + 23, y, { px: name === INV ? invPx : 14, bold: true });
     }
   }));
 
@@ -3335,13 +3336,15 @@ function rsRenderMulti(key) {
 }
 
 // ช่องที่ดึงจากหน้าแรกอัตโนมัติ (อ่านอย่างเดียว) — ถ้ายังว่างให้เตือนและมีปุ่มไปกรอก
-function rsRenderAuto(elId, srcId, label) {
-  const el = $id(elId), name = rsVal(srcId);
+// Model ใน Request Sheet ใช้แค่ 4 ตัวอักษรแรกของ Mold Model (เช่น "46p KTOT" → "46p")
+const rsModelShort = v => String(v || '').slice(0, 4).trim();
+function rsRenderAuto(elId, srcId, label, fn) {
+  const el = $id(elId), name = fn ? fn(rsVal(srcId)) : rsVal(srcId);
   el.innerHTML = '';
   if (name) {
     el.classList.remove('warn');
     const s = document.createElement('span'); s.textContent = name; el.appendChild(s);
-    const a = document.createElement('span'); a.className = 'auto'; a.textContent = 'จากหน้าแรก'; el.appendChild(a);
+    const a = document.createElement('span'); a.className = 'auto'; a.textContent = fn ? 'จากหน้าแรก (4 ตัวแรก)' : 'จากหน้าแรก'; el.appendChild(a);
   } else {
     el.classList.add('warn');
     const s = document.createElement('span'); s.textContent = 'ยังไม่ได้กรอก “' + label + '” ในหน้าแรก'; el.appendChild(s);
@@ -3361,7 +3364,7 @@ function rsData() {
     reqDate: rsFmtDate($id('rsReqDate').value), targetDate: rsFmtDate($id('rsTargetDate').value), finishDate: rsFmtDate($id('rsFinishDate').value),
     inspection: rsArr('rsInsp'),
     side: rsSideVal(), prodName: rsVal('rsProdName'), prodNo: rsVal('rsProdNo'),
-    model: rsVal('moldModel'), moldNo: rsVal('moldNo'), index: rsVal('drawingIndex'), pos,
+    model: rsModelShort(rsVal('moldModel')), moldNo: rsVal('moldNo'), index: rsVal('drawingIndex'), pos,
     partName: rsVal('rsPartName'), partQty: rsVal('rsPartQty'), workDesc: rsVal('rsWorkDesc')
   };
 }
@@ -3418,7 +3421,7 @@ function rsRenderSummary() {
 function rsSync() {
   Object.keys(RS_MULTI).forEach(rsRenderMulti);
   rsRenderAuto('rsRequestor', 'requestBy', 'Request by');
-  rsRenderAuto('rsModel', 'moldModel', 'Mold Model');
+  rsRenderAuto('rsModel', 'moldModel', 'Mold Model', rsModelShort);
   rsRenderAuto('rsMoldNo', 'moldNo', 'Mold No.');
   rsRenderAuto('rsIndex', 'drawingIndex', 'Current drawing index');
   const sv = rsSideVal();
