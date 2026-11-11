@@ -306,6 +306,78 @@ body.editing { overflow:hidden; }
 #editor #selbar { position:static; transform:none; width:auto; max-width:none; box-shadow:none; border:none; background:var(--pl2); justify-content:space-between; padding:6px 8px 6px 14px; }
 #editor #selbar .grow { max-width:none; flex:1; }
 #editor.hide-tools #toolbar { display:none !important; }
+
+/* ===== Request Sheet (ใบ Tool Making Work Request) ===== */
+#rsCard .sn { font-size:12px; letter-spacing:.3px; }
+#rsCard .og-row .act { justify-content:flex-start; }
+#rsCard .act.sel { border-color:var(--p); background:var(--pl2); box-shadow:0 0 0 2px rgba(67,97,255,.15); }
+#rsCard .act.sel .bi { background:var(--p); color:#fff; }
+#rsSummary { display:none; margin-top:12px; background:#fff; border:2px solid #dfe4ff; border-radius:18px; padding:12px 14px; font-size:14px; color:var(--ink); }
+#rsSummary.on { display:block; }
+#rsSummary .rs-sr { display:flex; gap:10px; padding:5px 0; align-items:flex-start; }
+#rsSummary .rs-sr + .rs-sr { border-top:1px dashed #e3e6f6; }
+#rsSummary .rs-k { flex:none; width:96px; color:var(--mute); font-size:12px; font-weight:600; padding-top:3px; }
+#rsSummary .rs-v { flex:1; min-width:0; font-weight:600; line-height:1.5; word-break:break-word; }
+#rsSummary .rs-empty { color:#b0b5d0; font-weight:500; }
+#rsSummary .rs-edit { margin-top:8px; }
+
+body.rs-open { overflow:hidden; }
+#rs { display:none; position:fixed; inset:0; z-index:95; flex-direction:column; background:var(--pl2); overscroll-behavior:contain; }
+#rs.on { display:flex; }
+#rs .rs-wrap { width:100%; max-width:560px; margin:0 auto; padding-bottom:24px; }
+#rs .rs-intro { font-size:13px; color:var(--mute); line-height:1.5; margin:2px 4px 14px; }
+.rs-f { background:#fff; border:2px solid #dfe4ff; border-radius:18px; padding:12px 14px 14px; margin-bottom:12px; }
+.rs-f > label { margin-bottom:8px; color:#4a5584; }
+.rs-f .en { color:var(--ink); }
+.rs-ro { display:flex; align-items:center; gap:8px; flex-wrap:wrap; min-height:48px; box-sizing:border-box; background:var(--pl2); border-radius:14px; padding:10px 14px; font-size:16px; font-weight:700; color:var(--ink); }
+.rs-ro .auto { margin-left:auto; font-size:11px; font-weight:600; color:var(--p); background:#fff; border-radius:999px; padding:2px 10px; }
+.rs-ro.warn { background:#fff8e6; color:#8a5a00; font-weight:600; font-size:14px; }
+.rs-in { width:100%; box-sizing:border-box; min-height:48px; padding:10px 14px; border:2px solid #dfe4ff; border-radius:14px; background:#fff; color:var(--ink); font-size:16px; -webkit-appearance:none; appearance:none; }
+.rs-in:focus { border-color:var(--p); outline:none; }
+.rs-ms-btn { display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%; min-height:48px; box-sizing:border-box; background:#fff; border:2px solid #dfe4ff; border-radius:14px; padding:8px 12px; font-size:15px; color:var(--ink); cursor:pointer; text-align:left; }
+.rs-ms.open .rs-ms-btn { border-color:var(--p); }
+.rs-ms-val { flex:1; min-width:0; display:flex; flex-wrap:wrap; gap:6px; }
+.rs-ms-ph { color:#9aa0bd; }
+.rs-chip { display:inline-flex; align-items:center; background:var(--pl); color:var(--p); border-radius:999px; padding:3px 10px; font-size:13px; font-weight:700; max-width:100%; overflow-wrap:anywhere; }
+.rs-ms-arrow { flex:none; width:10px; height:10px; border-right:2.5px solid var(--p); border-bottom:2.5px solid var(--p); transform:rotate(45deg) translateY(-2px); transition:transform .15s; }
+.rs-ms.open .rs-ms-arrow { transform:rotate(-135deg) translate(-2px,-2px); }
+.rs-ms-list { display:none; margin-top:8px; border:2px solid #dfe4ff; border-radius:14px; overflow:hidden; background:#fff; }
+.rs-ms.open .rs-ms-list { display:block; }
+.rs-opt { display:flex; align-items:center; gap:12px; width:100%; min-height:48px; box-sizing:border-box; padding:8px 14px; background:#fff; border:none; border-bottom:1px solid #eef0fb; font-size:15px; color:var(--ink); text-align:left; cursor:pointer; }
+.rs-opt:last-child { border-bottom:none; }
+.rs-opt:active { background:var(--pl2); }
+.rs-opt.on { background:var(--pl2); font-weight:700; }
+.rs-chk { flex:none; width:24px; height:24px; box-sizing:border-box; border:2px solid #c3c9ee; border-radius:7px; background:#fff; position:relative; }
+.rs-opt.on .rs-chk { background:var(--p); border-color:var(--p); }
+.rs-opt.on .rs-chk::after { content:''; position:absolute; left:6px; top:1px; width:7px; height:13px; border:solid #fff; border-width:0 3px 3px 0; transform:rotate(45deg); }
+.rs-other { display:none; margin-top:8px; }
+.rs-other.on { display:block; }
+.rs-dates { display:grid; grid-template-columns:1fr; gap:12px; }
+.rs-dates .rs-f { margin:0; }
+.rs-dates .rs-f > label { font-size:13px; }
+.rs-bottom { flex:none; padding:10px 12px max(12px, env(safe-area-inset-bottom)); background:#fff; box-shadow:0 -1px 8px rgba(31,42,90,.08); }
+.rs-bottom .cta { max-width:560px; margin:0 auto; }
+
+/* ===== Request Sheet v2: ฟิลด์ใหม่ + พรีวิว ===== */
+.rs-sec { display:none; margin-bottom:12px; }
+.rs-sec.on { display:block; }
+.rs-sec-h { display:flex; align-items:baseline; gap:8px; background:var(--p); color:#fff; border-radius:14px 14px 4px 4px; padding:8px 14px; font-weight:700; font-size:15px; margin-bottom:6px; }
+.rs-sec-h small { font-weight:500; font-size:12px; opacity:.85; }
+.rs-sec .rs-f { margin-bottom:8px; }
+.rs-hint { font-size:12px; color:var(--mute); line-height:1.45; margin:-2px 0 8px; }
+.rs-prow { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:8px; }
+.rs-pair { display:grid; grid-template-columns:3fr 2fr; gap:6px; min-width:0; }
+.rs-pair .rs-in { min-width:0; padding:10px; }
+@media (max-width:480px) { .rs-prow { grid-template-columns:1fr; gap:6px; } .rs-prow + .rs-prow { margin-top:12px; } }
+.rs-ta { min-height:96px; line-height:1.45; resize:vertical; font-family:inherit; }
+.rs-btns { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+.rs-bottom { display:grid; gap:8px; }
+.pv-tabs { display:none; gap:6px; padding:8px 10px; background:#fff; border-bottom:1px solid #e3e8ee; }
+.pv-tabs.on { display:flex; }
+.pv-tabs button { flex:1; border:2px solid transparent; background:var(--pl); color:var(--p); border-radius:999px; padding:9px 8px; font-size:14px; font-weight:700; cursor:pointer; }
+.pv-tabs button.on { background:var(--p); color:#fff; }
+#pv img.portrait { max-width:820px; margin:0 auto; }
+#pv.zoom img.portrait { max-width:none; margin:0; }
 </style>
 </head>
 <body>
@@ -323,6 +395,16 @@ body.editing { overflow:hidden; }
 
   <div class="layout">
   <div class="col-left">
+
+  <section class="step" id="rsCard">
+    <div class="sh"><span class="sn">RS</span><div><h3>Request Sheet</h3><p>ต้องเขียนใบ Tool Making Work Request ด้วยไหม?</p></div></div>
+    <div class="og-row">
+      <button class="act" id="rsNo" type="button"><span class="bi"><i class="ic" data-ic="x"></i></span><span class="at"><span class="bl">ไม่ต้อง</span><small>ใบแจ้งซ่อมอย่างเดียว</small></span></button>
+      <button class="act" id="rsYes" type="button"><span class="bi"><i class="ic" data-ic="pen"></i></span><span class="at"><span class="bl">เขียนด้วย</span><small>เปิดหน้ากรอก Request Sheet</small></span></button>
+    </div>
+    <div id="rsSummary"></div>
+    <input type="hidden" id="rsMode"><input type="hidden" id="rsFeature"><input type="hidden" id="rsLine"><input type="hidden" id="rsInsp"><input type="hidden" id="rsSide">
+  </section>
 
   <section class="step" id="step1">
     <div class="sh"><span class="sn">1</span><div><h3>ข้อมูลเอกสาร</h3><p>กรอกช่องที่มี <span style="color:var(--err)">*</span> ให้ครบ ช่องอื่นเว้นว่างได้</p></div></div>
@@ -458,14 +540,14 @@ body.editing { overflow:hidden; }
     <div class="sh"><span class="sn">4</span><div><h3>บันทึกและส่ง</h3><p>ดูตัวอย่างก่อน แล้วเลือกบันทึกไฟล์หรือส่งอีเมล</p></div></div>
     <button class="cta solid" id="previewBtn" type="button" onclick="showPreview()"><span class="bl">ดูตัวอย่างเอกสาร (Preview)</span><span class="bi"><i class="ic" data-ic="eye"></i></span></button>
     <div class="og">
-      <div class="og-t">บันทึกลงเครื่อง</div>
+      <div class="og-t">บันทึกลงเครื่อง <small id="ogNoteSave"></small></div>
       <div class="og-row">
         <button class="act" id="submitBtn" type="button" onclick="guard(generatePDF)"><span class="bi"><i class="ic" data-ic="download"></i></span><span class="at"><span class="bl">PDF</span><small>ดาวน์โหลด</small></span></button>
         <button class="act" id="pptxBtn" type="button" onclick="guard(generatePPTX)"><span class="bi"><i class="ic" data-ic="slides"></i></span><span class="at"><span class="bl">PowerPoint</span><small>ดาวน์โหลด</small></span></button>
       </div>
     </div>
     <div class="og">
-      <div class="og-t">ส่งทางอีเมล <small>เปิดเมนูแชร์พร้อมแนบไฟล์ให้</small></div>
+      <div class="og-t">ส่งทางอีเมล <small id="ogNoteMail">เปิดเมนูแชร์พร้อมแนบไฟล์ให้</small></div>
       <div class="og-row">
         <button class="act" id="shareBtn" type="button" onclick="guard(sharePDF)"><span class="bi"><i class="ic" data-ic="mail"></i></span><span class="at"><span class="bl">PDF</span><small>แนบส่งเมล</small></span></button>
         <button class="act" id="pptxShareBtn" type="button" onclick="guard(sharePPTX)"><span class="bi"><i class="ic" data-ic="mail"></i></span><span class="at"><span class="bl">PowerPoint</span><small>แนบส่งเมล</small></span></button>
@@ -489,6 +571,139 @@ body.editing { overflow:hidden; }
   <div class="ed-bottom" id="edBottom"></div>
 </div>
 
+<div id="rs" role="dialog" aria-modal="true" aria-label="Request Sheet">
+  <div class="ed-top">
+    <button type="button" class="mini icon" id="rsClose" title="ปิด"><i class="ic" data-ic="x"></i></button>
+    <span class="ed-title">Request Sheet</span>
+    <button type="button" class="mini solid" id="rsSave"><i class="ic" data-ic="check"></i>เสร็จ</button>
+  </div>
+  <div class="ed-body">
+    <div class="rs-wrap">
+      <div class="rs-intro">Tool Making Work Request — กรอกข้อมูลลงใบ ช่องที่มี <span style="color:var(--err)">*</span> คือช่องที่ต้องกรอกตามแบบฟอร์ม</div>
+
+      <div class="rs-f">
+        <label>Request Feature <span class="th">(ประเภทคำร้อง)</span> <span class="req">*</span></label>
+        <div class="rs-ms" id="rsFeatureBox">
+          <button type="button" class="rs-ms-btn" aria-expanded="false"><span class="rs-ms-val"></span><span class="rs-ms-arrow"></span></button>
+          <div class="rs-ms-list"></div>
+        </div>
+        <input type="text" class="rs-in rs-other" id="rsFeatureOther" placeholder="ระบุ Other…" autocomplete="off">
+      </div>
+
+      <div class="rs-f">
+        <label>Requestor <span class="th">(ผู้ร้องขอ)</span> <span class="req">*</span></label>
+        <div class="rs-ro" id="rsRequestor"></div>
+      </div>
+
+      <div class="rs-f">
+        <label>Department <span class="th">(แผนก)</span> <span class="req">*</span></label>
+        <div class="rs-ro"><span>TEF21</span><span class="auto">อัตโนมัติ</span></div>
+      </div>
+
+      <div class="rs-f">
+        <label>Request for Production line <span class="th">(ไลน์การผลิต)</span> <span class="req">*</span></label>
+        <div class="rs-ms" id="rsLineBox">
+          <button type="button" class="rs-ms-btn" aria-expanded="false"><span class="rs-ms-val"></span><span class="rs-ms-arrow"></span></button>
+          <div class="rs-ms-list"></div>
+        </div>
+        <input type="text" class="rs-in rs-other" id="rsLineOther" placeholder="ระบุไลน์อื่น…" autocomplete="off">
+      </div>
+
+      <div class="rs-dates">
+        <div class="rs-f">
+          <label for="rsReqDate">Request date <span class="th">(วันที่ร้องขอ)</span> <span class="req">*</span></label>
+          <input type="date" class="rs-in" id="rsReqDate">
+        </div>
+        <div class="rs-f">
+          <label for="rsTargetDate">Target date <span class="th">(เป้าหมาย)</span></label>
+          <input type="date" class="rs-in" id="rsTargetDate">
+        </div>
+        <div class="rs-f">
+          <label for="rsFinishDate">Finish date <span class="th">(วันที่เสร็จจริง)</span></label>
+          <input type="date" class="rs-in" id="rsFinishDate">
+        </div>
+      </div>
+
+      <div class="rs-f" style="margin-top:12px">
+        <label>Inspection report / document เพิ่มเติม</label>
+        <div class="rs-ms" id="rsInspBox">
+          <button type="button" class="rs-ms-btn" aria-expanded="false"><span class="rs-ms-val"></span><span class="rs-ms-arrow"></span></button>
+          <div class="rs-ms-list"></div>
+        </div>
+      </div>
+
+      <div class="rs-f">
+        <label>รายละเอียดงาน <span class="th">(ฝั่งขวาของใบ)</span></label>
+        <div class="rs-ms" id="rsSideBox">
+          <button type="button" class="rs-ms-btn" aria-expanded="false"><span class="rs-ms-val"></span><span class="rs-ms-arrow"></span></button>
+          <div class="rs-ms-list"></div>
+        </div>
+      </div>
+
+      <div class="rs-sec" id="rsMoldSec">
+        <div class="rs-sec-h">Mold <small>รายละเอียดแม่พิมพ์</small></div>
+        <div class="rs-f">
+          <label for="rsProdName">Product Name</label>
+          <input type="text" class="rs-in" id="rsProdName" placeholder="พิมพ์ชื่อผลิตภัณฑ์" autocomplete="off">
+        </div>
+        <div class="rs-f">
+          <label for="rsProdNo">Product Number</label>
+          <input type="text" class="rs-in" id="rsProdNo" placeholder="พิมพ์เลขผลิตภัณฑ์" autocomplete="off">
+        </div>
+        <div class="rs-f">
+          <label>Model <span class="req">*</span> <span class="th">(จาก Mold Model)</span></label>
+          <div class="rs-ro" id="rsModel"></div>
+        </div>
+        <div class="rs-f">
+          <label>Mold Number <span class="req">*</span> <span class="th">(จาก Mold No.)</span></label>
+          <div class="rs-ro" id="rsMoldNo"></div>
+        </div>
+        <div class="rs-f">
+          <label>Index <span class="req">*</span> <span class="th">(จาก Current drawing index)</span></label>
+          <div class="rs-ro" id="rsIndex"></div>
+        </div>
+        <div class="rs-f">
+          <label>Position / Qty</label>
+          <div class="rs-hint">มี 3 แถว แถวละ 2 ฝั่ง (ซ้าย/ขวา) — กรอกกี่ช่องก็ได้ ไม่บังคับ</div>
+        <div class="rs-prow">
+          <div class="rs-pair"><input type="text" class="rs-in" id="rsPos11" placeholder="Position" autocomplete="off"><input type="text" class="rs-in" id="rsQty11" placeholder="Qty" autocomplete="off" inputmode="numeric"></div>
+          <div class="rs-pair"><input type="text" class="rs-in" id="rsPos12" placeholder="Position" autocomplete="off"><input type="text" class="rs-in" id="rsQty12" placeholder="Qty" autocomplete="off" inputmode="numeric"></div>
+        </div>
+        <div class="rs-prow">
+          <div class="rs-pair"><input type="text" class="rs-in" id="rsPos21" placeholder="Position" autocomplete="off"><input type="text" class="rs-in" id="rsQty21" placeholder="Qty" autocomplete="off" inputmode="numeric"></div>
+          <div class="rs-pair"><input type="text" class="rs-in" id="rsPos22" placeholder="Position" autocomplete="off"><input type="text" class="rs-in" id="rsQty22" placeholder="Qty" autocomplete="off" inputmode="numeric"></div>
+        </div>
+        <div class="rs-prow">
+          <div class="rs-pair"><input type="text" class="rs-in" id="rsPos31" placeholder="Position" autocomplete="off"><input type="text" class="rs-in" id="rsQty31" placeholder="Qty" autocomplete="off" inputmode="numeric"></div>
+          <div class="rs-pair"><input type="text" class="rs-in" id="rsPos32" placeholder="Position" autocomplete="off"><input type="text" class="rs-in" id="rsQty32" placeholder="Qty" autocomplete="off" inputmode="numeric"></div>
+        </div>
+        </div>
+      </div>
+
+      <div class="rs-sec" id="rsOtherSec">
+        <div class="rs-sec-h">Other Part <small>ชิ้นงานที่ไม่ใช่ชิ้นส่วนแม่พิมพ์ / งานทั่วไป</small></div>
+        <div class="rs-f">
+          <label for="rsPartName">Part Name</label>
+          <input type="text" class="rs-in" id="rsPartName" placeholder="พิมพ์ชื่อชิ้นงาน" autocomplete="off">
+        </div>
+        <div class="rs-f">
+          <label for="rsPartQty">Qty</label>
+          <input type="text" class="rs-in" id="rsPartQty" placeholder="จำนวน" autocomplete="off" inputmode="numeric">
+        </div>
+      </div>
+
+      <div class="rs-f">
+        <label for="rsWorkDesc">Work description <span class="th">(รายละเอียดของงาน)</span></label>
+        <textarea class="rs-in rs-ta" id="rsWorkDesc" placeholder="อธิบายงานที่ต้องการ" rows="3"></textarea>
+      </div>
+    </div>
+  </div>
+  <div class="rs-bottom">
+    <button class="cta soft" id="rsPrev2" type="button"><span class="bl">ดูตัวอย่าง Request Sheet</span><span class="bi"><i class="ic" data-ic="eye"></i></span></button>
+    <button class="cta solid" id="rsSave2" type="button"><span class="bl">บันทึก Request Sheet</span><span class="bi"><i class="ic" data-ic="check"></i></span></button>
+  </div>
+</div>
+
 <div id="dlg" role="dialog" aria-modal="true" aria-labelledby="dlg-t">
   <div class="dlg-box">
     <h3 id="dlg-t">ยังกรอกข้อมูลไม่ครบ</h3>
@@ -505,7 +720,8 @@ body.editing { overflow:hidden; }
 <div id="pv" onclick="if (event.target === this) closePreview()">
   <div class="pv-box">
     <div class="pv-head"><span>Preview<small>แตะรูปเพื่อซูมเข้า/ออก</small></span><button class="mini icon" type="button" title="ปิด" onclick="closePreview()"><i class="ic" data-ic="x"></i></button></div>
-    <div class="pv-scroll"><img id="pv-img" alt="Preview" onclick="document.getElementById('pv').classList.toggle('zoom')"></div>
+    <div class="pv-tabs" id="pvTabs"><button type="button" id="pvTabRepair" onclick="pvTab('repair')">ใบแจ้งซ่อม</button><button type="button" id="pvTabRs" onclick="pvTab('rs')">Request Sheet</button></div>
+    <div class="pv-scroll"><img id="pv-img" alt="Preview" onclick="document.getElementById('pv').classList.toggle('zoom')"><img id="pv-img2" class="portrait" alt="Preview Request Sheet" style="display:none" onclick="document.getElementById('pv').classList.toggle('zoom')"></div>
   </div>
 </div>
 
@@ -1711,9 +1927,9 @@ function drawPage(data) {
 
   // --- Request by / Accept by ---
   let w = text('Request by:', 765, 58, 16, '#000');
-  value(data.req, 765 + w + 6, 58, 16, 16, 1095 - (765 + w + 6));
+  value(data.req, 765 + w + 6, 58, 16, 22, 1095 - (765 + w + 6));
   w = text('Accept by:', 765, 98, 16, '#000');
-  value(data.acc, 765 + w + 6, 98, 16, 16, 1095 - (765 + w + 6));
+  value(data.acc, 765 + w + 6, 98, 16, 22, 1095 - (765 + w + 6));
 
   // --- กรอบสีม่วง + รูปภาพตามที่จัดวางไว้ ---
   const FX = 27, FY = 160, FW = 864, FH = 535, B = 3;
@@ -1780,10 +1996,16 @@ function pageData() {
 }
 
 /* ============ Preview: ดูหน้าเอกสารจริงก่อนบันทึก/ส่ง ============ */
-function showPreview() {
+function showPreview(tab) {
   const pv = document.getElementById('pv');
-  try { document.getElementById('pv-img').src = drawPage(pageData()).toDataURL('image/jpeg', 0.92); }
+  const useRS = document.getElementById('rsMode').value === 'yes';
+  try {
+    document.getElementById('pv-img').src = drawPage(pageData()).toDataURL('image/jpeg', 0.92);
+    if (useRS) document.getElementById('pv-img2').src = drawRequestSheet(rsData()).toDataURL('image/jpeg', 0.92);
+  }
   catch (err) { reportError(err); return; }
+  document.getElementById('pvTabs').classList.toggle('on', useRS);
+  pvTab(useRS && tab === 'rs' ? 'rs' : 'repair');
   pv.classList.remove('zoom'); pv.classList.add('on');
   document.body.style.overflow = 'hidden';
 }
@@ -1800,6 +2022,10 @@ function buildPDF() {
   const { jsPDF } = window.jspdf;
   const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [PW, PH], hotfixes: ['px_scaling'] });
   pdf.addImage(page.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, PW, PH);
+  if (rsOn()) {                                   // รวม Request Sheet เป็นหน้า 2 ของไฟล์เดียวกัน
+    pdf.addPage([816, 1056], 'portrait');         // Letter แนวตั้ง (816x1056 px ที่ 96 dpi)
+    pdf.addImage(drawRequestSheet(rsData()).toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, 816, 1056);
+  }
   return {
     pdf, moldNo, problem,
     filename: 'Repair_Request_' + (moldNo || 'Blank').replace(/[\\/:*?"<>|\s]+/g, '_') + '.pdf',
@@ -1923,9 +2149,9 @@ async function buildPPTX() {
 
   // --- Request by / Accept by ---
   let w = text('Request by:', 765, 58, 16, '#000000');
-  value(reqBy, 765 + w + 6, 58, 16, 16, 1095 - (765 + w + 6));
+  value(reqBy, 765 + w + 6, 58, 16, 22, 1095 - (765 + w + 6));
   w = text('Accept by:', 765, 98, 16, '#000000');
-  value(accBy, 765 + w + 6, 98, 16, 16, 1095 - (765 + w + 6));
+  value(accBy, 765 + w + 6, 98, 16, 22, 1095 - (765 + w + 6));
 
   // --- รูปถ่ายในกรอบสีม่วง + รอยวาด (พิกัดต้องตรงกับ drawPage) ---
   const FX = 27, FY = 160, FW = 864, FH = 535, B = 3;
@@ -2074,6 +2300,12 @@ async function buildPPTX() {
   bg.fillStyle = grad; bg.fillRect(0, 0, bar.width, bar.height);
   slide.addImage({ data: bar.toDataURL('image/png'), x: 0, y: pxIn(782), w: pxIn(PW), h: pxIn(10) });
 
+  if (rsOn()) {                                   // สไลด์ 2: Request Sheet (รูปเต็มความสูงสไลด์ วางกึ่งกลาง)
+    const s2 = pptx.addSlide();
+    const h2 = PH, w2 = PH * 612 / 792;
+    s2.addImage({ data: drawRequestSheet(rsData()).toDataURL('image/jpeg', 0.95), x: pxIn((PW - w2) / 2), y: 0, w: pxIn(w2), h: pxIn(h2) });
+  }
+
   return {
     pptx, moldNo,
     filename: 'Repair_Request_' + (moldNo || 'Blank').replace(/[\\/:*?"<>|\s]+/g, '_') + '.pptx'
@@ -2114,7 +2346,7 @@ function mailParts(kind) {
   return {
     mold, problem,
     subject: 'แจ้งซ่อม Mold ' + (mold || '-') + (problem ? ' : ' + problem : ''),
-    body: 'เรียนผู้เกี่ยวข้อง\n\nแจ้งซ่อม Mold: ' + (mold || '-') + '\nปัญหา: ' + (problem || '-') + '\n\nแนบไฟล์ ' + kind + ' ตามเอกสารแนบ'
+    body: 'เรียนผู้เกี่ยวข้อง\n\nแจ้งซ่อม Mold: ' + (mold || '-') + '\nปัญหา: ' + (problem || '-') + '\n\nแนบไฟล์ ' + kind + (document.getElementById('rsMode').value === 'yes' ? (kind === 'PDF' ? ' (รวมใบแจ้งซ่อมและ Request Sheet ในไฟล์เดียว)' : ' และ Request Sheet (PDF)') : '') + ' ตามเอกสารแนบ'
   };
 }
 function mailHref(kind) {
@@ -2135,13 +2367,14 @@ async function sharePDF() {
 
   try {
     const r = buildPDF();
-    const body = 'แจ้งซ่อม Mold: ' + (r.moldNo || '-') + '\nปัญหา: ' + (r.problem || '-');
+    const body = 'แจ้งซ่อม Mold: ' + (r.moldNo || '-') + '\nปัญหา: ' + (r.problem || '-') + (rsOn() ? '\n(ไฟล์เดียว: ใบแจ้งซ่อม + Request Sheet)' : '');
     const file = new File([r.pdf.output('blob')], r.filename, { type: 'application/pdf' });
+    const files = [file];
 
     // 1) แชร์ไฟล์ตรงๆ ผ่านเมนูแชร์ของมือถือ (เลือก Mail / Outlook / LINE ได้)
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    if (navigator.canShare && navigator.canShare({ files })) {
       try {
-        await navigator.share({ files: [file], title: r.subject, text: body });
+        await navigator.share({ files, title: r.subject, text: body });
         return;
       } catch (err) {
         if (err && err.name === 'AbortError') return;   // ผู้ใช้กดยกเลิก
@@ -2152,13 +2385,22 @@ async function sharePDF() {
     // 2) วิธีสำรอง: บันทึก PDF แล้วเปิดอีเมลที่กรอกหัวข้อ/เนื้อหาไว้ให้ (ต้องแนบไฟล์เอง)
     await savePDF(r);
     const href = mailHref();
-    hint.innerHTML = 'บันทึกไฟล์ <b>' + r.filename + '</b> แล้ว<br>กดปุ่มด้านล่างเพื่อเปิดอีเมลถึง ' + MAIL_TO + ' แล้วแนบไฟล์ PDF ที่เพิ่งบันทึก<br><a href="' + href + '" target="_top">เปิดอีเมล →</a>';
+    hint.innerHTML = 'บันทึกไฟล์ <b>' + r.filename + '</b> แล้ว<br>กดปุ่มด้านล่างเพื่อเปิดอีเมลถึง ' + MAIL_TO + ' แล้วแนบไฟล์ PDF ที่เพิ่งบันทึก' + (rsOn() ? ' (1 ไฟล์ มีทั้งใบแจ้งซ่อมและ Request Sheet)' : '') + '<br><a href="' + href + '" target="_top">เปิดอีเมล →</a>';
     hint.style.display = 'block';
   } catch (err) {
     reportError(err);
   } finally {
     setIdle(btn);
   }
+}
+
+// Request Sheet เป็น PDF อย่างเดียว (Letter แนวตั้ง) — แนบคู่กับ PowerPoint ตอนส่งเมล
+function buildRsPDF() {
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'letter' });
+  pdf.addImage(drawRequestSheet(rsData()).toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, 612, 792);
+  const mold = document.getElementById('moldNo').value.trim();
+  return { pdf, filename: 'Request_Sheet_' + (mold || 'Blank').replace(/[\\/:*?"<>|\s]+/g, '_') + '.pdf' };
 }
 
 async function sharePPTX() {
@@ -2171,13 +2413,16 @@ async function sharePPTX() {
     const r = await buildPPTX();
     const blob = await pptxBlob(r);
     const m = mailParts('PowerPoint');
-    const body = 'แจ้งซ่อม Mold: ' + (r.moldNo || '-') + '\nปัญหา: ' + (m.problem || '-');
+    const body = 'แจ้งซ่อม Mold: ' + (r.moldNo || '-') + '\nปัญหา: ' + (m.problem || '-') + (rsOn() ? '\nแนบ Request Sheet (PDF) ด้วย' : '');
     const file = new File([blob], r.filename, { type: PPTX_MIME });
+    const rsPdf = rsOn() ? buildRsPDF() : null;                       // Request Sheet (PDF) แนบคู่กับ PowerPoint
+    const files = [file];
+    if (rsPdf) files.push(new File([rsPdf.pdf.output('blob')], rsPdf.filename, { type: 'application/pdf' }));
 
     // 1) แชร์ไฟล์ตรงๆ ผ่านเมนูแชร์ของมือถือ (เลือก Mail / Outlook / LINE ได้)
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    if (navigator.canShare && navigator.canShare({ files })) {
       try {
-        await navigator.share({ files: [file], title: m.subject, text: body });
+        await navigator.share({ files, title: m.subject, text: body });
         return;
       } catch (err) {
         if (err && err.name === 'AbortError') return;   // ผู้ใช้กดยกเลิก
@@ -2187,8 +2432,9 @@ async function sharePPTX() {
 
     // 2) วิธีสำรอง: บันทึก PowerPoint แล้วเปิดอีเมลที่กรอกหัวข้อ/เนื้อหาไว้ให้ (ต้องแนบไฟล์เอง)
     await savePPTX(r, blob);
+    if (rsPdf) { await new Promise(res => setTimeout(res, 400)); await savePDF(rsPdf); }
     const href = mailHref('PowerPoint');
-    hint.innerHTML = 'บันทึกไฟล์ <b>' + r.filename + '</b> แล้ว<br>กดปุ่มด้านล่างเพื่อเปิดอีเมลถึง ' + MAIL_TO + ' แล้วแนบไฟล์ PowerPoint ที่เพิ่งบันทึก<br><a href="' + href + '" target="_top">เปิดอีเมล →</a>';
+    hint.innerHTML = 'บันทึกไฟล์ <b>' + (rsPdf ? r.filename + '</b> และ <b>' + rsPdf.filename : r.filename) + '</b> แล้ว<br>กดปุ่มด้านล่างเพื่อเปิดอีเมลถึง ' + MAIL_TO + ' แล้วแนบไฟล์ที่เพิ่งบันทึก' + (rsPdf ? ' (ทั้ง 2 ไฟล์)' : '') + '<br><a href="' + href + '" target="_top">เปิดอีเมล →</a>';
     hint.style.display = 'block';
   } catch (err) {
     reportError(err);
@@ -2254,6 +2500,8 @@ function missingList() {
   if (!$id('moldNo').value.trim()) out.push({ id: 'moldNo', label: 'Mold No.', note: 'ใช้ตั้งชื่อไฟล์และแสดงบนเอกสาร', req: true });
   if (!$id('problem').value.trim()) out.push({ id: 'problem', label: 'Problem (ปัญหาที่พบ)', note: 'อธิบายปัญหาสั้นๆ', req: true });
   if (!items.length) out.push({ id: 'step2', label: 'ภาพหน้างาน', note: 'ยังไม่มีรูป (ไม่บังคับ)', req: false });
+  const rm = rsMissing();
+  if (rm.length) out.push({ id: 'rsCard', label: 'Request Sheet', note: 'ยังไม่ได้กรอก: ' + rm.join(', ') + ' (ไม่บังคับ)', req: false });
   return out;
 }
 function guard(fn) {
@@ -2489,7 +2737,8 @@ syncTouchClass();
    ถ้าเบราว์เซอร์รีโหลดหน้าหรือปิดแอปตอนไปถ่ายรูป กลับมาแล้วข้อมูลยังอยู่ — ล้างได้ด้วยปุ่ม "เริ่มใบใหม่"
    ข้อความ → localStorage (เขียนทันที) · รูปและรอยวาด → IndexedDB (รูปเขียนครั้งเดียวต่อรูป หลังจากนั้นเขียนเฉพาะรายละเอียดเล็กๆ) */
 const DRAFT_LS = 'repairSheetDraft.v1', DRAFT_DB = 'repairSheetDraft', DRAFT_STORE = 'kv';
-const DRAFT_FIELDS = ['moldNo', 'moldModel', 'problem', 'requestBy', 'acceptBy', 'requestDetail', 'drawingIndex'];
+const DRAFT_FIELDS = ['moldNo', 'moldModel', 'problem', 'requestBy', 'acceptBy', 'requestDetail', 'drawingIndex',
+  'rsMode', 'rsFeature', 'rsFeatureOther', 'rsLine', 'rsLineOther', 'rsReqDate', 'rsTargetDate', 'rsFinishDate', 'rsInsp', 'rsSide', 'rsProdName', 'rsProdNo', 'rsPos11', 'rsQty11', 'rsPos12', 'rsQty12', 'rsPos21', 'rsQty21', 'rsPos22', 'rsQty22', 'rsPos31', 'rsQty31', 'rsPos32', 'rsQty32', 'rsPartName', 'rsPartQty', 'rsWorkDesc'];
 let draftOK = true, idbOK = true, draftSig = '', draftPrev = '', draftSaving = false, draftRestoring = false;
 let draftTime = 0, draftMsg = 'saved', draftUids = [], draftDbp = null;
 
@@ -2678,6 +2927,7 @@ async function draftInit() {
     draftRestoring = true;
     try {
       if (fields) DRAFT_FIELDS.forEach(id => { if (fields[id] != null) $id(id).value = fields[id]; });
+      rsSync();
       let lost = 0;
       if (meta && meta.items && meta.items.length) {
         const itemAt = [];                                 // ลำดับรูปเดิม -> รูปที่กู้คืนได้
@@ -2727,6 +2977,7 @@ function newSheet() {
   if (!confirm('เริ่มใบใหม่?\nรูป และรอยวาดของใบนี้จะถูกล้างทั้งหมด (/Mold No./Mold Model/ชื่อผู้แจ้ง)')) return;
   ['problem', 'drawingIndex'].forEach(id => { $id(id).value = ''; });
   $id('requestDetail').selectedIndex = 0;
+  rsReset();
   document.querySelectorAll('.field-err').forEach(el => el.classList.remove('field-err'));
   items.forEach(it => it.card.remove());
   items = []; frameShapes = [];
@@ -2742,6 +2993,478 @@ function newSheet() {
   toast('เริ่มใบใหม่แล้ว');
 }
 $id('draftNew').addEventListener('click', newSheet);
+
+/* ============ Request Sheet: วาดใบ Tool Making Work Request (Letter แนวตั้ง) ============
+   พิกัดด้านล่างวัดจากไฟล์ TEF22_Request_sheet.pdf ที่ 144 dpi (1224 x 1584 หน่วย) แล้วย่อ/ขยายด้วย RS_S */
+const RS_W = 1224, RS_H = 1584, RS_S = 1.5;
+const RS_FONT = 'Arial, Tahoma, "Noto Sans Thai", sans-serif';
+
+function drawRequestSheet(d) {
+  const cv = document.createElement('canvas');
+  cv.width = Math.round(RS_W * RS_S); cv.height = Math.round(RS_H * RS_S);
+  const g = cv.getContext('2d');
+  g.scale(RS_S, RS_S);
+  g.fillStyle = '#fff'; g.fillRect(0, 0, RS_W, RS_H);
+  g.lineCap = 'butt'; g.lineJoin = 'miter';
+
+  const INK = '#000', RED = '#e20015', BLUE = '#9bc2e6', GRAY = '#e7e6e6', DARK = '#595959';
+  const FK = 0.8, DK = 1.4;                        // DK = ตัวคูณขนาดตัวอักษรของ "ข้อมูลที่กรอก" (ใหญ่กว่าป้ายชื่อช่อง)
+                                     // ตัวอักษรในใบจริงเล็กกว่าที่ตั้งไว้ → ย่อด้วยตัวคูณเดียว
+  const font = (px, bold, italic) => (italic ? 'italic ' : '') + (bold ? 'bold ' : '') + (px * FK).toFixed(2) + 'px ' + RS_FONT;
+  const line = (x1, y1, x2, y2, w) => { g.lineWidth = w || 1.6; g.strokeStyle = INK; g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); };
+  const H = (y, x1, x2) => line(x1, y, x2, y);
+  const V = (x, y1, y2) => line(x, y1, x, y2);
+  const fill = (x, y, w, h, c) => { g.fillStyle = c; g.fillRect(x, y, w, h); };
+  // ข้อความ: opt = {px, bold, italic, color, align, base}
+  function T(s, x, y, o) {
+    o = o || {};
+    g.font = font(o.px || 15, o.bold, o.italic);
+    g.fillStyle = o.color || INK;
+    g.textAlign = o.align || 'left';
+    g.textBaseline = o.base || 'middle';
+    g.fillText(s, x, y);
+  }
+  const W = (s, px, bold, italic) => { g.font = font(px, bold, italic); return g.measureText(s).width; };
+  // "*" สีแดง + ข้อความ
+  function starT(s, x, y, o) {
+    o = Object.assign({ px: 15, bold: true }, o || {});
+    T('*', x, y, Object.assign({}, o, { color: RED }));
+    T(s, x + W('*', o.px, o.bold) + 1, y, o);
+  }
+  function chk(x, y, on, w, h) {            // ช่องติ๊ก (x,y = มุมซ้ายบน)
+    w = w || 24; h = h || 20;
+    g.lineWidth = 1.6; g.strokeStyle = INK; g.strokeRect(x + .8, y + .8, w - 1.6, h - 1.6);
+    if (on) {
+      g.lineWidth = 3.4; g.strokeStyle = '#0a2a66'; g.lineCap = 'round'; g.lineJoin = 'round';
+      g.beginPath(); g.moveTo(x + 4, y + h * .55); g.lineTo(x + w * .4, y + h - 4); g.lineTo(x + w - 3, y + 3.5); g.stroke();
+      g.lineCap = 'butt'; g.lineJoin = 'miter';
+    }
+  }
+  // ย่อขนาดตัวอักษรให้พอดีความกว้าง
+  function fitT(s, x, y, maxW, o) {
+    o = Object.assign({ px: 16 }, o || {});
+    let px = o.px * DK; while (px > 9 && W(s, px, o.bold, o.italic) > maxW) px -= 1;
+    T(s, x, y, Object.assign({}, o, { px }));
+  }
+  function wrapLines(s, maxW, px) {
+    const out = []; let cur = '';
+    const put = tok => {
+      if (W(cur + tok, px) <= maxW || !cur) { cur += tok; return; }
+      out.push(cur.replace(/\s+$/, '')); cur = tok.replace(/^\s+/, '');
+    };
+    String(s).replace(/\r/g, '').split('\n').forEach((para, pi) => {
+      if (pi) { out.push(cur); cur = ''; }
+      let toks;
+      try { toks = Array.from(new Intl.Segmenter('th', { granularity: 'word' }).segment(para), x => x.segment); }
+      catch (err) { toks = Array.from(para); }
+      toks.forEach(tok => {
+        if (W(tok, px) > maxW) { Array.from(tok).forEach(put); }      // คำเดียวยาวกว่าบรรทัด → ตัดทีละตัวอักษร
+        else put(tok);
+      });
+    });
+    out.push(cur); return out;
+  }
+
+  const X0 = 85, X1 = 1137, has = (a, v) => (a || []).includes(v);
+
+  /* ---------- พื้นสี ---------- */
+  fill(85, 158, 609, 32, BLUE);                    // Request Feature
+  fill(739, 121, 398, 36, BLUE);                   // Mold
+  fill(739, 364, 398, 29, BLUE);                   // Other Part
+  fill(85, 495, 1052, 14, DARK);                   // แถบดำ
+  fill(85, 568, 555, 65, GRAY); fill(85, 1216, 555, 64, GRAY);   // หัวตาราง (Start date / Process Code / Process)
+
+  /* ---------- เส้นกรอบ ---------- */
+  g.lineWidth = 2.4; g.strokeStyle = INK; g.strokeRect(X0, 54, X1 - X0, 1540 - 54);
+  [120, 494, 509, 546, 567].forEach(y => H(y, X0, X1));
+  H(87, 761, X1); V(761, 54, 120); V(933, 54, 120);
+  // ซ้าย
+  H(157, X0, 694); [273, 304, 334, 363, 393].forEach(y => H(y, X0, 694));
+  V(694, 120, 509);
+  V(186, 273, 304); V(483, 273, 304); V(585, 273, 304);
+  V(285, 304, 393); V(186, 363, 393); V(388, 363, 393); V(483, 363, 393); V(585, 363, 393);
+  // ขวา
+  [157, 189, 221, 253, 273, 304, 334, 363, 393, 421].forEach(y => H(y, 739, X1));
+  V(739, 120, 422); V(933, 157, 189); V(997, 221, 253); V(997, 393, 422);
+  V(868, 253, 363); V(933, 253, 363); V(1073, 253, 363);
+  // ตารางกระบวนการ
+  const rowsY = []; for (let i = 0; i <= 16; i++) rowsY.push(633 + i * (1197 - 633) / 16);
+  rowsY.forEach(y => H(y, X0, X1)); H(1197, X0, X1);
+  [186, 285, 640, 739, 868, 933, 997].forEach(x => V(x, 567, 1198));
+  [1215, 1280, 1311, 1343, 1374].forEach(y => H(y, X0, X1));
+  [186, 285, 640, 739, 868, 933, 997].forEach(x => V(x, 1215, 1374));
+  // ตาราง Revision
+  [1441, 1459, 1479, 1499, 1519].forEach(y => H(y, X0, X1));
+  V(186, 1441, 1540); V(285, 1441, 1540); V(997, 1441, 1540);
+
+  /* ---------- หัวกระดาษ ---------- */
+  try { if (typeof logoImg !== 'undefined' && logoImg.complete && logoImg.naturalWidth) g.drawImage(logoImg, 97, 66, 180, 40); } catch (e) {}
+  T('Tool Making Work Request', 513, 80, { px: 21, bold: true, align: 'center' });
+  T('เอกสารร้องขอเพื่อซ่อมสร้างชิ้นส่วนและชิ้นส่วนแม่พิมพ์', 513, 102, { px: 21, bold: true, align: 'center' });
+  T('Job number :', 847, 71, { px: 15, bold: true, align: 'center' });
+  T('Production order no.', 847, 98, { px: 14, bold: true, align: 'center' });
+  T('*in case of new part registered', 847, 112, { px: 13, italic: true, align: 'center' });
+
+  /* ---------- SAP / Material ---------- */
+  starT('SAP number ............................................', 88, 139, { px: 15 });
+  T('Material number : ........................................', 330, 139, { px: 15, bold: true });
+  T('*in case of', 580, 131, { px: 13, italic: true });
+  T('new part registered', 580, 148, { px: 13, italic: true });
+
+  /* ---------- Request Feature ---------- */
+  starT(' Request Feature:ประเภทคำร้อง:', 90, 174, { px: 15 });
+  const FEAT_ROWS = [
+    ['Repair Mold insert', 'Urgent new mold insert', 'New spare part ( Inventory )', 'Measurement analysis'],
+    ['Mold Relocation', 'New mold', 'Fixture / Gauge design', 'Other']
+  ];
+  const featLines = n => n === 'New spare part ( Inventory )' ? ['New spare part', '( Inventory )'] : [n];   // ยาวเกินช่อง → ขึ้น 2 บรรทัด
+  // ความกว้างแต่ละคอลัมน์ = ข้อความที่ยาวสุดของคอลัมน์นั้น (แถวบน/ล่างตรงกัน) แล้วเว้นระยะเท่าๆ กัน ไม่ให้ชนช่องติ๊กถัดไป
+  const featW = [0, 1, 2, 3].map(c => Math.max.apply(null, FEAT_ROWS.map(r => Math.max.apply(null, featLines(r[c]).map(s => W(s, 14, true))))));
+  const featX = []; let fxx = 98;
+  featW.forEach(w => { featX.push(fxx); fxx += 23 + w + 10; });
+  FEAT_ROWS.forEach((row, ri) => row.forEach((name, c) => {
+    const x = featX[c], y = ri ? 246 : 215, on = has(d.features, name);
+    chk(x - 2, y - 10, on, 24, 19);
+    if (name === 'Other') {
+      const t = (d.featureOther || '').trim(), lx = x + 23, ow = W('Other', 14, true);
+      T('Other', lx, y, { px: 14, bold: true });
+      if (t) fitT(t, lx + ow + 6, y, 694 - (lx + ow + 6) - 6, { px: 14, bold: false });
+      else T('..........................', lx + ow, y, { px: 14, bold: true });
+    } else {
+      const ls = featLines(name);
+      ls.forEach((s, i) => T(s, x + 23, y + (i - (ls.length - 1) / 2) * 13, { px: 14, bold: true }));
+    }
+  }));
+
+  /* ---------- Requestor / Department ---------- */
+  starT('Requestor:', 88, 283, { px: 14 }); T('ผู้ร้องขอ:', 88, 297, { px: 14, bold: true });
+  fitT(d.requestor || '', 198, 289, 280, { px: 17 });
+  T('Department:', 489, 283, { px: 14, bold: true });
+  starT('แผนก:', 489, 297, { px: 14 });
+  fitT(d.dept || '', 590, 289, 100, { px: 17 });
+
+  /* ---------- Production line ---------- */
+  starT('Request for Production line:', 88, 313, { px: 13 }); T('ไลน์การผลิต:', 88, 327, { px: 13, bold: true });
+  const lineBoxes = [['VHP', 297], ['EV14', 360], ['EV6', 425], ['LSR', 484], ['Microflex', 545]];
+  lineBoxes.forEach(([n, x]) => { chk(x, 309, has(d.lines, n), 20, 18); T(n, x + 23, 319, { px: 13, bold: true }); });
+  chk(620, 309, has(d.lines, 'Other'), 20, 18);
+  const lo = (d.lineOther || '').trim();
+  if (lo) fitT(lo, 645, 319, 46, { px: 13, bold: true }); else T('...............', 644, 319, { px: 13, bold: true });
+
+  /* ---------- Cost center ---------- */
+  starT(' Cost center:', 88, 343, { px: 14 });
+  T('Must relate with cost center in SAP no.', 88, 357, { px: 11, italic: true });
+
+  /* ---------- วันที่ ---------- */
+  const dsh = v => v || '....../....../......';
+  starT('Request date:', 88, 372, { px: 13 }); T('วันที่ร้องขอ:', 88, 386, { px: 13, bold: true });
+  if (d.reqDate) fitT(d.reqDate, 235, 384, 92, { px: 15, align: 'center', bold: true }); else T(dsh(''), 235, 384, { px: 15, align: 'center', color: '#444' });
+  T('Target date:', 292, 372, { px: 13, bold: true }); T('เป้าหมาย:', 292, 386, { px: 13, bold: true });
+  if (d.targetDate) fitT(d.targetDate, 435, 384, 88, { px: 15, align: 'center', bold: true }); else T(dsh(''), 435, 384, { px: 15, align: 'center', color: '#444' });
+  T('Finish date:', 490, 372, { px: 13, bold: true }); T('วันที่เสร็จจริง:', 490, 386, { px: 13, bold: true });
+  if (d.finishDate) fitT(d.finishDate, 640, 384, 100, { px: 15, align: 'center', bold: true }); else T(dsh(''), 640, 384, { px: 15, align: 'center', color: '#444' });
+
+  /* ---------- Inspection report ---------- */
+  T('*', 98, 416, { px: 19, bold: true }); T('Inspection report / document เพิ่มเติม :', 109, 414, { px: 13, bold: true });
+  const insp = [['Before and after report', 148, 437], ['3D inspection report', 369, 437], ['2D inspection report', 148, 469], ['No need inspection report', 369, 469]];
+  insp.forEach(([n, x, y]) => { chk(x, y, has(d.inspection, n), 20, 17); T(n, x + 26, y + 8, { px: 13.5, bold: true }); });
+
+  /* ---------- ขวา: Mold ---------- */
+  const isMold = d.side === 'mold', isOther = d.side === 'other';
+  chk(713, 131, isMold, 18, 14);
+  T('Mold', 750, 132, { px: 14.5, bold: true }); T('รายละเอียดแม่พิมพ์', 750, 147, { px: 14, bold: true });
+  T('Product Name :', 750, 174, { px: 14, bold: true });
+  T('Product Number :', 945, 174, { px: 14, bold: true });
+  starT('Model :', 746, 203, { px: 14 });
+  starT('Mold Number :', 746, 238, { px: 14 });
+  starT('Index :', 1008, 238, { px: 14 });
+  if (isMold) {
+    fitT(d.prodName || '', 836, 174, 92, { px: 14 });
+    fitT(d.prodNo || '', 1074, 174, 58, { px: 14 });
+    fitT(d.model || '', 855, 206, 275, { px: 16 });
+    fitT(d.moldNo || '', 846, 238, 144, { px: 16 });
+    fitT(d.index || '', 1074, 238, 58, { px: 16 });
+  }
+  const starC = (s, cx, y) => starT(s, cx - (W('*', 14, true) + 1 + W(s, 14, true)) / 2, y, { px: 14 });
+  starC('Position', 803.5, 263); starC('Qty', 900.5, 263);
+  T('Position', 1003, 263, { px: 14, bold: true, align: 'center' }); T('Qty', 1105, 263, { px: 14, bold: true, align: 'center' });
+  const prow = [273, 304, 334, 363];
+  for (let r = 0; r < 3; r++) {
+    const p = (d.pos && d.pos[r]) || ['', '', '', ''], cy = (prow[r] + prow[r + 1]) / 2 + 1;
+    if (!isMold) continue;
+    fitT(p[0], 803.5, cy, 118, { px: 15, align: 'center' }); fitT(p[1], 900.5, cy, 58, { px: 15, align: 'center' });
+    fitT(p[2], 1003, cy, 134, { px: 15, align: 'center' }); fitT(p[3], 1105, cy, 58, { px: 15, align: 'center' });
+  }
+
+  /* ---------- ขวา: Other Part ---------- */
+  chk(713, 369, isOther, 18, 14);
+  T('Other Part', 750, 371, { px: 14, bold: true }); T('ชิ้นงานที่ไม่ใช่ชิ้นส่วนแม่พิมพ์ / งานทั่วไป', 750, 383, { px: 12.6, bold: true });
+  T('Part Name :', 750, 408, { px: 14, bold: true }); T('Qty :', 1005, 408, { px: 14, bold: true });
+  if (isOther) { fitT(d.partName || '', 840, 408, 150, { px: 15 }); fitT(d.partQty || '', 1048, 408, 84, { px: 15 }); }
+
+  /* ---------- Work description ---------- */
+  T('Work description :', 710, 456, { px: 13, bold: true }); T('รายละเอียดของงาน :', 710, 468, { px: 13, bold: true });
+  const wd = (d.workDesc || '').trim();
+  if (!wd) {
+    T('......................................................................................................', 813, 452, { px: 13 });
+    T('......................................................................................................', 813, 481, { px: 13 });
+  } else {
+    let px = 22, lines;
+    for (; px >= 10; px--) { lines = wrapLines(wd, 318, px); if (lines.length * (px + 5) <= 70) break; }
+    const lh = px + 5, top = 457 - ((lines.length - 1) * lh) / 2 + 2;
+    lines.forEach((s, i) => T(s, 813, top + i * lh, { px }));
+  }
+
+  /* ---------- หมายเหตุ ---------- */
+  T('หมายเหตุ', 88, 520, { px: 13, bold: true });
+  T('* = Requestor must fill in /ผู้ร้องขอเติมข้อมูลในช่องว่างให้ครบถ้วน', 95, 536, { px: 12.5, bold: true });
+  T('Work leader:', 754, 522, { px: 13, bold: true }); T('ผู้นำทีม / ผู้รับคำร้อง :', 754, 536, { px: 13, bold: true });
+  T('Do not Include Machine Breakdown Time. / ไม่รวมเวลาสูญเสียจากที่เครื่องเสีย หรือไม่ได้ทำงาน', 611, 557, { px: 13, bold: true, align: 'center' });
+
+  /* ---------- ตารางกระบวนการ ---------- */
+  function tableHead(yTop, yBot) {
+    const cy = (yTop + yBot) / 2, c2 = [
+      [135.5, ['Start date:', 'วันที่เริ่ม:']], [235.5, ['Process Code', 'รหัสกระบวนการผลิต']], [462.5, ['Process', 'กระบวนการผลิต']],
+      [689.5, ['Finish date', 'วันที่เสร็จจริง']], [803.5, ['Signature', 'ลายมือชื่อ']], [900.5, ['Goods', 'ชิ้นงาน', '(pcs.)']],
+      [965, ['Defect', 'ของเสีย', '(pcs.)']], [1067, ['Man working hours', 'เวลาทำงาน (คน)', '(hrs.)']]
+    ];
+    c2.forEach(([x, ls]) => ls.forEach((s, i) => T(s, x, cy + (i - (ls.length - 1) / 2) * 14, { px: 12, bold: true, align: 'center' })));
+  }
+  tableHead(567, 633); tableHead(1215, 1280);
+  const PROC = ['CAD Electrode Design', 'CAM Electrode Milling', 'Milling Electrode', 'CAM Wire EDM', 'Wire EDM', 'Drill EDM', 'Form EDM', 'CMM for EDM correction',
+    'Grinding', 'Welding / Laser / TIG', 'CAD / CAM CNC Milling', 'CNC Milling', 'CMM final inspection', 'Other ………......….', 'Other ………......….', 'Other ………......….'];
+  PROC.forEach((n, i) => {
+    const y0 = rowsY[i], y1 = rowsY[i + 1], cy = (y0 + y1) / 2;
+    T(String(i + 1), 235.5, cy, { px: 13, align: 'center' });
+    chk(289, cy - 10, false, 23, 20); T(n, 322, cy, { px: 13 });
+  });
+  T('Working additional / งานเพิ่มเติม', 611, 1206, { px: 12.5, bold: true, align: 'center' });
+
+  /* ---------- ลายเซ็นท้ายใบ ---------- */
+  T('Receiver: ……………………………', 200, 1400, { px: 13 }); T('Date :…………………………………..', 200, 1420, { px: 13 });
+  T('Work leader : ………………………', 777, 1400, { px: 13 }); T('Date :…………………………………..', 777, 1420, { px: 13 });
+
+  /* ---------- Revision ---------- */
+  const rev = [
+    [1450, '3.1', '05 March 2025', 'Correct date of version (content not change)'],
+    [1469, '3.0', '20 February 2025', 'Removed Machine time & Planner approval - Updatedd Production line and process'],
+    [1489, '2.1', '31 May 2023', 'Correct version and date (Content not change)'],
+    [1509, '2.0', '29 May 2023', 'Revised Request Feature and add production line']
+  ];
+  rev.forEach(([y, a, b, c]) => { T(a, 135.5, y, { px: 13.2, align: 'center' }); T(b, 235.5, y, { px: 13.2, align: 'center' }); T(c, 641, y, { px: 13.2, align: 'center' }); T('Nalisa', 1067, y, { px: 13.2, align: 'center' }); });
+  T('Revision', 135.5, 1529, { px: 13, bold: true, align: 'center' }); T('Date', 235.5, 1529, { px: 13, bold: true, align: 'center' });
+  T('Reason of revision', 641, 1529, { px: 13, bold: true, align: 'center' }); T('Issued by', 1067, 1529, { px: 13, bold: true, align: 'center' });
+  T('Doc. no. MP-311.301-302-HmjP Internal use (C-SC1)', 1098, 1552, { px: 14.2, align: 'right', color: '#222' });
+  return cv;
+}
+
+
+/* ============ Request Sheet: ตัวเลือกเขียนใบ + หน้าต่างกรอก ============
+   ค่าเก็บในช่องซ่อน/ช่องกรอก (id ขึ้นต้น rs) ซึ่งอยู่ใน DRAFT_FIELDS → บันทึกร่างอัตโนมัติ/กู้คืนได้เหมือนช่องอื่น */
+const RS_FEATURES = ['Repair Mold insert', 'Urgent new mold insert', 'New spare part ( Inventory )', 'Measurement analysis', 'Mold Relocation', 'New mold', 'Fixture / Gauge design', 'Other'];
+const RS_LINES = ['VHP', 'EV14', 'EV6', 'LSR', 'Microflex', 'Other'];
+const RS_INSP = ['Before and after report', '3D inspection report', '2D inspection report', 'No need inspection report'];
+const RS_MULTI = {
+  feature: { box: 'rsFeatureBox', hid: 'rsFeature', other: 'rsFeatureOther', opts: RS_FEATURES, ph: 'เลือกประเภทคำร้อง (เลือกได้หลายข้อ)' },
+  line:    { box: 'rsLineBox',    hid: 'rsLine',    other: 'rsLineOther',    opts: RS_LINES,    ph: 'เลือกไลน์การผลิต (เลือกได้หลายไลน์)' },
+  insp:    { box: 'rsInspBox',    hid: 'rsInsp',    opts: RS_INSP, excl: 'No need inspection report', ph: 'เลือก Inspection report (เลือกได้หลายข้อ)' },
+  side:    { box: 'rsSideBox',    hid: 'rsSide',    opts: ['Mold', 'Other part'], single: true, ph: 'เลือก Mold หรือ Other part',
+             lab: { 'Mold': 'Mold · รายละเอียดแม่พิมพ์', 'Other part': 'Other part · ชิ้นงานที่ไม่ใช่ชิ้นส่วนแม่พิมพ์ / งานทั่วไป' } }
+};
+const rsOn = () => $id('rsMode').value === 'yes';
+const rsArr = id => { try { const a = JSON.parse($id(id).value || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } };
+const rsVal = id => $id(id).value.trim();
+const rsFmtDate = v => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || ''); return m ? m[3] + '/' + m[2] + '/' + m[1] : ''; };
+const rsToday = () => { const d = new Date(), p = n => String(n).padStart(2, '0'); return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); };
+const rsSideVal = () => { const v = rsArr('rsSide')[0]; return v === 'Mold' ? 'mold' : v === 'Other part' ? 'other' : ''; };
+
+// รายการที่เลือก (Other + ข้อความ → "Other: ข้อความ")
+function rsLabels(key) {
+  const c = RS_MULTI[key], other = c.other ? rsVal(c.other) : '';
+  return rsArr(c.hid).filter(x => c.opts.includes(x)).map(x => x === 'Other' && other ? 'Other: ' + other : ((c.lab && c.lab[x]) || x));
+}
+
+function rsCloseLists() {
+  Object.values(RS_MULTI).forEach(x => { $id(x.box).classList.remove('open'); $id(x.box).querySelector('.rs-ms-btn').setAttribute('aria-expanded', 'false'); });
+}
+function rsBuildMulti(key) {
+  const c = RS_MULTI[key], box = $id(c.box), list = box.querySelector('.rs-ms-list');
+  list.innerHTML = '';
+  c.opts.forEach(o => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'rs-opt'; b.dataset.v = o; b.setAttribute('role', 'checkbox');
+    b.innerHTML = '<span class="rs-chk"></span><span></span>';
+    b.lastChild.textContent = (c.lab && c.lab[o]) || o;
+    b.addEventListener('click', () => {
+      let cur = rsArr(c.hid);
+      if (c.single) { cur = [o]; rsCloseLists(); }
+      else {
+        const i = cur.indexOf(o);
+        if (i >= 0) cur.splice(i, 1);
+        else {
+          if (c.excl && o === c.excl) cur = [o];                         // "No need" เลือกคู่กับอย่างอื่นไม่ได้
+          else { if (c.excl) cur = cur.filter(x => x !== c.excl); cur.push(o); }
+        }
+      }
+      $id(c.hid).value = JSON.stringify(cur);
+      rsSync();
+      if (c.other && o === 'Other' && cur.includes('Other')) $id(c.other).focus({ preventScroll: true });
+    });
+    list.appendChild(b);
+  });
+  box.querySelector('.rs-ms-btn').addEventListener('click', () => {
+    const open = !box.classList.contains('open');
+    rsCloseLists();
+    box.classList.toggle('open', open);
+    box.querySelector('.rs-ms-btn').setAttribute('aria-expanded', String(open));
+  });
+}
+Object.keys(RS_MULTI).forEach(rsBuildMulti);
+
+function rsRenderMulti(key) {
+  const c = RS_MULTI[key], box = $id(c.box), sel = rsArr(c.hid), val = box.querySelector('.rs-ms-val');
+  box.querySelectorAll('.rs-opt').forEach(b => {
+    const on = sel.includes(b.dataset.v);
+    b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on));
+  });
+  const labels = rsLabels(key);
+  val.innerHTML = '';
+  if (!labels.length) { const s = document.createElement('span'); s.className = 'rs-ms-ph'; s.textContent = c.ph; val.appendChild(s); }
+  labels.forEach(t => { const s = document.createElement('span'); s.className = 'rs-chip'; s.textContent = t; val.appendChild(s); });
+  if (c.other) $id(c.other).classList.toggle('on', sel.includes('Other'));
+}
+
+// ช่องที่ดึงจากหน้าแรกอัตโนมัติ (อ่านอย่างเดียว) — ถ้ายังว่างให้เตือนและมีปุ่มไปกรอก
+function rsRenderAuto(elId, srcId, label) {
+  const el = $id(elId), name = rsVal(srcId);
+  el.innerHTML = '';
+  if (name) {
+    el.classList.remove('warn');
+    const s = document.createElement('span'); s.textContent = name; el.appendChild(s);
+    const a = document.createElement('span'); a.className = 'auto'; a.textContent = 'จากหน้าแรก'; el.appendChild(a);
+  } else {
+    el.classList.add('warn');
+    const s = document.createElement('span'); s.textContent = 'ยังไม่ได้กรอก “' + label + '” ในหน้าแรก'; el.appendChild(s);
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'mini outline'; b.textContent = 'ไปกรอก';
+    b.addEventListener('click', () => { rsClose(); $id(srcId).scrollIntoView({ behavior: 'smooth', block: 'center' }); $id(srcId).focus({ preventScroll: true }); });
+    el.appendChild(b);
+  }
+}
+
+// ข้อมูลทั้งหมดที่ใช้วาดใบ Request Sheet
+function rsData() {
+  const pos = [1, 2, 3].map(r => [rsVal('rsPos' + r + '1'), rsVal('rsQty' + r + '1'), rsVal('rsPos' + r + '2'), rsVal('rsQty' + r + '2')]);
+  return {
+    features: rsArr('rsFeature'), featureOther: rsVal('rsFeatureOther'),
+    requestor: rsVal('requestBy'), dept: 'TEF21',
+    lines: rsArr('rsLine'), lineOther: rsVal('rsLineOther'),
+    reqDate: rsFmtDate($id('rsReqDate').value), targetDate: rsFmtDate($id('rsTargetDate').value), finishDate: rsFmtDate($id('rsFinishDate').value),
+    inspection: rsArr('rsInsp'),
+    side: rsSideVal(), prodName: rsVal('rsProdName'), prodNo: rsVal('rsProdNo'),
+    model: rsVal('moldModel'), moldNo: rsVal('moldNo'), index: rsVal('drawingIndex'), pos,
+    partName: rsVal('rsPartName'), partQty: rsVal('rsPartQty'), workDesc: rsVal('rsWorkDesc')
+  };
+}
+// รายการที่ยังไม่ได้กรอก (ใช้เตือนก่อนสร้างไฟล์ ไม่บังคับ)
+function rsMissing() {
+  if (!rsOn()) return [];
+  const m = [];
+  if (!rsArr('rsFeature').length) m.push('Request Feature');
+  if (!rsVal('requestBy')) m.push('Requestor (Request by)');
+  if (!rsArr('rsLine').length) m.push('Production line');
+  if (!$id('rsReqDate').value) m.push('Request date');
+  return m;
+}
+
+function rsRenderSummary() {
+  const mode = $id('rsMode').value, box = $id('rsSummary');
+  $id('rsNo').classList.toggle('sel', mode === 'no');
+  $id('rsYes').classList.toggle('sel', mode === 'yes');
+  box.classList.toggle('on', mode === 'yes');
+  $id('ogNoteSave').textContent = mode === 'yes' ? 'ใบแจ้งซ่อม + Request Sheet รวมในไฟล์เดียว' : '';
+  $id('ogNoteMail').textContent = mode === 'yes' ? 'PDF = ไฟล์เดียว 2 หน้า · PowerPoint = .pptx + Request Sheet (PDF)' : 'เปิดเมนูแชร์พร้อมแนบไฟล์ให้';
+  if (mode !== 'yes') { box.innerHTML = ''; return; }
+  const sv = rsSideVal();
+  const kind = sv === 'mold' ? 'Mold' + (rsVal('rsProdName') ? ' · ' + rsVal('rsProdName') : '')
+    : sv === 'other' ? 'Other part' + (rsVal('rsPartName') ? ' · ' + rsVal('rsPartName') : '') : '';
+  const rows = [
+    ['Feature', rsLabels('feature').join(', ')],
+    ['Requestor', rsVal('requestBy')],
+    ['Department', 'TEF21'],
+    ['Production line', rsLabels('line').join(', ')],
+    ['Request date', rsFmtDate($id('rsReqDate').value)],
+    ['Target date', rsFmtDate($id('rsTargetDate').value)],
+    ['Finish date', rsFmtDate($id('rsFinishDate').value)],
+    ['Inspection', rsLabels('insp').join(', ')],
+    ['ประเภทงาน', kind],
+    ['Work description', rsVal('rsWorkDesc')]
+  ];
+  box.innerHTML = '';
+  rows.forEach(([k, v]) => {
+    const r = document.createElement('div'); r.className = 'rs-sr';
+    const a = document.createElement('div'); a.className = 'rs-k'; a.textContent = k;
+    const b = document.createElement('div'); b.className = 'rs-v';
+    if (v) b.textContent = v; else { b.classList.add('rs-empty'); b.textContent = '—'; }
+    r.appendChild(a); r.appendChild(b); box.appendChild(r);
+  });
+  const bar = document.createElement('div'); bar.className = 'rs-btns';
+  const e = document.createElement('button'); e.type = 'button'; e.className = 'mini outline';
+  e.innerHTML = '<i class="ic" data-ic="pen"></i>แก้ไข Request Sheet'; e.addEventListener('click', rsOpen);
+  const p = document.createElement('button'); p.type = 'button'; p.className = 'mini outline';
+  p.innerHTML = '<i class="ic" data-ic="eye"></i>ดูตัวอย่าง'; p.addEventListener('click', () => showPreview('rs'));
+  bar.appendChild(e); bar.appendChild(p); box.appendChild(bar); hydrateIcons(box);
+}
+
+function rsSync() {
+  Object.keys(RS_MULTI).forEach(rsRenderMulti);
+  rsRenderAuto('rsRequestor', 'requestBy', 'Request by');
+  rsRenderAuto('rsModel', 'moldModel', 'Mold Model');
+  rsRenderAuto('rsMoldNo', 'moldNo', 'Mold No.');
+  rsRenderAuto('rsIndex', 'drawingIndex', 'Current drawing index');
+  const sv = rsSideVal();
+  $id('rsMoldSec').classList.toggle('on', sv === 'mold');
+  $id('rsOtherSec').classList.toggle('on', sv === 'other');
+  rsRenderSummary();
+}
+
+function rsOpen() {
+  if (!$id('rsReqDate').value) $id('rsReqDate').value = rsToday();   // วันที่ร้องขอ: ใส่วันนี้ให้ก่อน แก้ได้
+  rsCloseLists(); rsSync();
+  $id('rs').classList.add('on'); document.body.classList.add('rs-open');
+  $id('rs').querySelector('.ed-body').scrollTop = 0;
+}
+function rsClose() {
+  $id('rs').classList.remove('on'); document.body.classList.remove('rs-open');
+  rsSync();
+}
+function rsDone() { rsClose(); toast('บันทึก Request Sheet แล้ว'); }
+function rsReset() {
+  DRAFT_FIELDS.filter(id => id.indexOf('rs') === 0).forEach(id => { $id(id).value = ''; });
+  rsSync();
+}
+
+/* ---------- พรีวิว ---------- */
+function pvTab(t) {
+  const rs = t === 'rs';
+  $id('pv-img').style.display = rs ? 'none' : '';
+  $id('pv-img2').style.display = rs ? '' : 'none';
+  $id('pvTabRepair').classList.toggle('on', !rs);
+  $id('pvTabRs').classList.toggle('on', rs);
+  $id('pv').classList.remove('zoom');
+  const sc = $id('pv').querySelector('.pv-scroll'); if (sc) sc.scrollTop = 0;
+}
+
+$id('rsYes').addEventListener('click', () => { $id('rsMode').value = 'yes'; rsOpen(); });
+$id('rsNo').addEventListener('click', () => { $id('rsMode').value = 'no'; rsSync(); });
+$id('rsClose').addEventListener('click', rsClose);
+$id('rsSave').addEventListener('click', rsDone);
+$id('rsSave2').addEventListener('click', rsDone);
+$id('rsPrev2').addEventListener('click', () => showPreview('rs'));
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && $id('rs').classList.contains('on') && !$id('pv').classList.contains('on')) rsClose(); });
+document.addEventListener('input', e => { if (e.target && e.target.id && e.target.id.indexOf('rs') === 0) rsSync(); });
+['requestBy', 'moldNo', 'moldModel', 'drawingIndex'].forEach(id => $id(id).addEventListener('input', rsSync));
+rsSync();
+
 draftInit();
 
 hydrateIcons();
