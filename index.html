@@ -582,6 +582,11 @@ body.rs-open { overflow:hidden; }
       <div class="rs-intro">Tool Making Work Request — กรอกข้อมูลลงใบ ช่องที่มี <span style="color:var(--err)">*</span> คือช่องที่ต้องกรอกตามแบบฟอร์ม</div>
 
       <div class="rs-f">
+        <label for="rsSap">SAP number <span class="th">(เลข SAP)</span> <span class="req">*</span></label>
+        <input type="text" class="rs-in" id="rsSap" placeholder="พิมพ์เลข SAP" autocomplete="off" enterkeyhint="next">
+      </div>
+
+      <div class="rs-f">
         <label>Request Feature <span class="th">(ประเภทคำร้อง)</span> <span class="req">*</span></label>
         <div class="rs-ms" id="rsFeatureBox">
           <button type="button" class="rs-ms-btn" aria-expanded="false"><span class="rs-ms-val"></span><span class="rs-ms-arrow"></span></button>
@@ -659,8 +664,8 @@ body.rs-open { overflow:hidden; }
           <div class="rs-ro" id="rsMoldNo"></div>
         </div>
         <div class="rs-f">
-          <label>Index <span class="req">*</span> <span class="th">(จาก Current drawing index)</span></label>
-          <div class="rs-ro" id="rsIndex"></div>
+          <label for="rsIdx">Index <span class="req">*</span></label>
+          <input type="text" class="rs-in" id="rsIdx" placeholder="พิมพ์ Index" autocomplete="off">
         </div>
         <div class="rs-f">
           <label>Position / Qty</label>
@@ -2738,7 +2743,7 @@ syncTouchClass();
    ข้อความ → localStorage (เขียนทันที) · รูปและรอยวาด → IndexedDB (รูปเขียนครั้งเดียวต่อรูป หลังจากนั้นเขียนเฉพาะรายละเอียดเล็กๆ) */
 const DRAFT_LS = 'repairSheetDraft.v1', DRAFT_DB = 'repairSheetDraft', DRAFT_STORE = 'kv';
 const DRAFT_FIELDS = ['moldNo', 'moldModel', 'problem', 'requestBy', 'acceptBy', 'requestDetail', 'drawingIndex',
-  'rsMode', 'rsFeature', 'rsFeatureOther', 'rsLine', 'rsLineOther', 'rsReqDate', 'rsTargetDate', 'rsFinishDate', 'rsInsp', 'rsSide', 'rsProdName', 'rsProdNo', 'rsPos11', 'rsQty11', 'rsPos12', 'rsQty12', 'rsPos21', 'rsQty21', 'rsPos22', 'rsQty22', 'rsPos31', 'rsQty31', 'rsPos32', 'rsQty32', 'rsPartName', 'rsPartQty', 'rsWorkDesc'];
+  'rsMode', 'rsSap', 'rsIdx', 'rsFeature', 'rsFeatureOther', 'rsLine', 'rsLineOther', 'rsReqDate', 'rsTargetDate', 'rsFinishDate', 'rsInsp', 'rsSide', 'rsProdName', 'rsProdNo', 'rsPos11', 'rsQty11', 'rsPos12', 'rsQty12', 'rsPos21', 'rsQty21', 'rsPos22', 'rsQty22', 'rsPos31', 'rsQty31', 'rsPos32', 'rsQty32', 'rsPartName', 'rsPartQty', 'rsWorkDesc'];
 let draftOK = true, idbOK = true, draftSig = '', draftPrev = '', draftSaving = false, draftRestoring = false;
 let draftTime = 0, draftMsg = 'saved', draftUids = [], draftDbp = null;
 
@@ -3106,7 +3111,11 @@ function drawRequestSheet(d) {
   T('*in case of new part registered', 847, 112, { px: 13, italic: true, align: 'center' });
 
   /* ---------- SAP / Material ---------- */
-  starT('SAP number ............................................', 88, 139, { px: 15 });
+  if (d.sap) {
+    starT('SAP number', 88, 139, { px: 15 });
+    const sx = 88 + W('*', 15, true) + 1 + W('SAP number', 15, true) + 8;
+    fitT(d.sap, sx, 139, 322 - sx, { px: 15, bold: true });
+  } else starT('SAP number ............................................', 88, 139, { px: 15 });
   T('Material number : ........................................', 330, 139, { px: 15, bold: true });
   T('*in case of', 580, 131, { px: 13, italic: true });
   T('new part registered', 580, 148, { px: 13, italic: true });
@@ -3359,12 +3368,12 @@ function rsData() {
   const pos = [1, 2, 3].map(r => [rsVal('rsPos' + r + '1'), rsVal('rsQty' + r + '1'), rsVal('rsPos' + r + '2'), rsVal('rsQty' + r + '2')]);
   return {
     features: rsArr('rsFeature'), featureOther: rsVal('rsFeatureOther'),
-    requestor: rsVal('requestBy'), dept: 'TEF21',
+    sap: rsVal('rsSap'), requestor: rsVal('requestBy'), dept: 'TEF21',
     lines: rsArr('rsLine'), lineOther: rsVal('rsLineOther'),
     reqDate: rsFmtDate($id('rsReqDate').value), targetDate: rsFmtDate($id('rsTargetDate').value), finishDate: rsFmtDate($id('rsFinishDate').value),
     inspection: rsArr('rsInsp'),
     side: rsSideVal(), prodName: rsVal('rsProdName'), prodNo: rsVal('rsProdNo'),
-    model: rsModelShort(rsVal('moldModel')), moldNo: rsVal('moldNo'), index: rsVal('drawingIndex'), pos,
+    model: rsModelShort(rsVal('moldModel')), moldNo: rsVal('moldNo'), index: rsVal('rsIdx'), pos,
     partName: rsVal('rsPartName'), partQty: rsVal('rsPartQty'), workDesc: rsVal('rsWorkDesc')
   };
 }
@@ -3372,6 +3381,7 @@ function rsData() {
 function rsMissing() {
   if (!rsOn()) return [];
   const m = [];
+  if (!rsVal('rsSap')) m.push('SAP number');
   if (!rsArr('rsFeature').length) m.push('Request Feature');
   if (!rsVal('requestBy')) m.push('Requestor (Request by)');
   if (!rsArr('rsLine').length) m.push('Production line');
@@ -3391,6 +3401,7 @@ function rsRenderSummary() {
   const kind = sv === 'mold' ? 'Mold' + (rsVal('rsProdName') ? ' · ' + rsVal('rsProdName') : '')
     : sv === 'other' ? 'Other part' + (rsVal('rsPartName') ? ' · ' + rsVal('rsPartName') : '') : '';
   const rows = [
+    ['SAP number', rsVal('rsSap')],
     ['Feature', rsLabels('feature').join(', ')],
     ['Requestor', rsVal('requestBy')],
     ['Department', 'TEF21'],
@@ -3423,7 +3434,6 @@ function rsSync() {
   rsRenderAuto('rsRequestor', 'requestBy', 'Request by');
   rsRenderAuto('rsModel', 'moldModel', 'Mold Model', rsModelShort);
   rsRenderAuto('rsMoldNo', 'moldNo', 'Mold No.');
-  rsRenderAuto('rsIndex', 'drawingIndex', 'Current drawing index');
   const sv = rsSideVal();
   $id('rsMoldSec').classList.toggle('on', sv === 'mold');
   $id('rsOtherSec').classList.toggle('on', sv === 'other');
