@@ -496,6 +496,31 @@ body.rs-open { overflow:hidden; }
   #rs .rs-prow { grid-template-columns:1fr; }
   #rs .rs-sec.on, #rsOtherSec.on { grid-template-columns:1fr; }
 }
+
+/* ===================================================================
+   v20 — โหมดหน้าจอโทรศัพท์บนคอม: เมาส์ + จอกว้าง → แสดงเป็นคอลัมน์กว้างเท่ามือถือ ไว้กลางจอ
+   (มือถือจริง / จำลองมือถือใน Edge-Chrome เป็น pointer:coarse จึงไม่โดน)
+   =================================================================== */
+@media (min-width:700px) and (pointer:fine) {
+  html, body { background:#c9d1ea; }
+  body { padding:0 12px; }
+  body::before { display:none; }                      /* แถบ Bosch บนสุดของหน้าต่าง — ใช้แถบของ "จอ" แทน */
+  .app-container, .layout { max-width:430px; }
+  .app-container { box-sizing:border-box; width:100%; margin:22px auto; box-shadow:0 0 0 1px rgba(31,42,90,.10), 0 18px 50px rgba(31,42,90,.28); }
+
+  /* หน้าจอเต็มจอทั้งหลาย (กรอก Request Sheet / แก้ไขรูป) ให้อยู่ในคอลัมน์เดียวกับ "จอโทรศัพท์" */
+  #rs, #editor { inset:0 auto 0 50%; width:430px; max-width:100%; transform:translateX(-50%);
+    box-shadow:0 0 0 1px rgba(31,42,90,.10), 0 0 60px rgba(31,42,90,.35); }
+  /* ข้างในให้ใช้สัดส่วนแบบมือถือ (ไม่ใช้ขนาดแบบจอกว้าง) */
+  #stepper .st span { display:none; }
+  #stepper .st.cur span { display:inline; }
+  #rs .rs-wrap { max-width:none; padding:20px 14px 4px; }
+  #rs .rs-f > label, #rs .rs-dates .rs-f > label { font-size:12.5px; }
+  #rs .rs-dates { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+  #rs .rs-dates .rs-f:first-child { grid-column:1 / -1; }
+  #rs .rs-bottom { padding-left:12px; padding-right:12px; }
+  #rs .rs-bottom .cta .lg { display:none; }
+}
 </style>
 </head>
 <body>
@@ -514,15 +539,6 @@ body.rs-open { overflow:hidden; }
   <div class="layout">
   <div class="col-left">
 
-  <section class="step" id="rsCard">
-    <div class="sh"><span class="sn">RS</span><div><h3>Request Sheet</h3><p>ต้องเขียนใบ Tool Making Work Request ด้วยไหม?</p></div></div>
-    <div class="og-row">
-      <button class="act" id="rsNo" type="button"><span class="bi"><i class="ic" data-ic="x"></i></span><span class="at"><span class="bl">ไม่ต้อง</span><small>ใบแจ้งซ่อมอย่างเดียว</small></span></button>
-      <button class="act" id="rsYes" type="button"><span class="bi"><i class="ic" data-ic="pen"></i></span><span class="at"><span class="bl">เขียนด้วย</span><small>เปิดหน้ากรอกใบ</small></span></button>
-    </div>
-    <div id="rsSummary"></div>
-    <input type="hidden" id="rsMode"><input type="hidden" id="rsFeature"><input type="hidden" id="rsLine"><input type="hidden" id="rsInsp"><input type="hidden" id="rsSide">
-  </section>
 
   <section class="step" id="step1">
     <div class="sh"><span class="sn">1</span><div><h3>ข้อมูลเอกสาร</h3><p>กรอกช่องที่มี <span style="color:var(--err)">*</span> ให้ครบ ช่องอื่นเว้นว่างได้</p></div></div>
@@ -568,6 +584,16 @@ body.rs-open { overflow:hidden; }
       <label for="drawingIndex">Current drawing index</label>
       <input type="text" id="drawingIndex" placeholder="พิมพ์เลข drawing index" autocomplete="off" enterkeyhint="done">
     </div>
+  </section>
+
+  <section class="step" id="rsCard">
+    <div class="sh"><span class="sn">RS</span><div><h3>Request Sheet</h3><p>ต้องเขียนใบ Tool Making Work Request ด้วยไหม?</p></div></div>
+    <div class="og-row">
+      <button class="act" id="rsNo" type="button"><span class="bi"><i class="ic" data-ic="x"></i></span><span class="at"><span class="bl">ไม่ต้อง</span><small>ใบแจ้งซ่อมอย่างเดียว</small></span></button>
+      <button class="act" id="rsYes" type="button"><span class="bi"><i class="ic" data-ic="pen"></i></span><span class="at"><span class="bl">เขียนด้วย</span><small>เปิดหน้ากรอกใบ</small></span></button>
+    </div>
+    <div id="rsSummary"></div>
+    <input type="hidden" id="rsMode"><input type="hidden" id="rsFeature"><input type="hidden" id="rsLine"><input type="hidden" id="rsInsp"><input type="hidden" id="rsSide">
   </section>
 
   <section class="step" id="step2">
@@ -766,7 +792,7 @@ body.rs-open { overflow:hidden; }
       <div class="rs-sec" id="rsMoldSec">
         <div class="rs-sec-h">Mold <small>รายละเอียดแม่พิมพ์</small></div>
         <div class="rs-f">
-          <label for="rsProdName">Product Name</label>
+          <label for="rsProdName">Product Name <span class="th">(ออโต้ แก้ได้)</span></label>
           <input type="text" class="rs-in" id="rsProdName" placeholder="พิมพ์ชื่อผลิตภัณฑ์" autocomplete="off">
         </div>
         <div class="rs-f">
@@ -3457,6 +3483,17 @@ function rsRenderMulti(key) {
 // ช่องที่ดึงจากหน้าแรกอัตโนมัติ (อ่านอย่างเดียว) — ถ้ายังว่างให้เตือนและมีปุ่มไปกรอก
 // Model ใน Request Sheet ใช้แค่ข้อความก่อนเว้นวรรคของ Mold Model (เช่น "105p KTOT" → "105p", "6p Nox" → "6p")
 const rsModelShort = v => String(v || '').trim().split(/\s+/)[0];
+
+// Product Name (ส่วน Mold): ดึงข้อความหลังเว้นวรรคแรกของ Mold Model ให้อัตโนมัติ (เช่น "6p nox" → "nox", "46p KTOT" → "KTOT")
+// แก้เองได้ — ถ้าผู้ใช้พิมพ์แก้/ลบเอง จะไม่ถูกทับอีก (จนกว่าจะพิมพ์ให้ตรงกับค่าอัตโนมัติ หรือกดล้างฟอร์ม)
+const rsModelRest = v => String(v || '').trim().split(/\s+/).slice(1).join(' ');
+let rsProdAuto = null, rsProdTouched = false;
+function rsAutoProd() {
+  const el = $id('rsProdName'), rest = rsModelRest(rsVal('moldModel'));
+  if (el.value === '' ? !rsProdTouched : el.value === rsProdAuto) el.value = rest;
+  if (el.value === rest) { rsProdAuto = rest; rsProdTouched = false; }
+}
+$id('rsProdName').addEventListener('input', e => { rsProdTouched = e.target.value !== rsProdAuto; });
 function rsRenderAuto(elId, srcId, label, fn) {
   const el = $id(elId), name = fn ? fn(rsVal(srcId)) : rsVal(srcId);
   el.innerHTML = '';
@@ -3540,6 +3577,7 @@ function rsRenderSummary() {
 }
 
 function rsSync() {
+  rsAutoProd();
   Object.keys(RS_MULTI).forEach(rsRenderMulti);
   rsRenderAuto('rsRequestor', 'requestBy', 'Request by');
   rsRenderAuto('rsModel', 'moldModel', 'Mold Model', rsModelShort);
@@ -3563,6 +3601,7 @@ function rsClose() {
 function rsDone() { rsClose(); toast('บันทึก Request Sheet แล้ว'); }
 function rsReset() {
   DRAFT_FIELDS.filter(id => id.indexOf('rs') === 0).forEach(id => { $id(id).value = ''; });
+  rsProdAuto = null; rsProdTouched = false;
   rsSync();
 }
 
