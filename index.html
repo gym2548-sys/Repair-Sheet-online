@@ -2020,14 +2020,14 @@ function closePreview() {
 }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closePreview(); });
 
-function buildPDF() {
+function buildPDF(opts) {                         // opts.noRs = ไม่รวมหน้า Request Sheet (ใช้ตอนบันทึกแยก 2 ไฟล์)
   const moldNo = document.getElementById('moldNo').value.trim();
   const problem = document.getElementById('problem').value.trim();
   const page = drawPage(pageData());
   const { jsPDF } = window.jspdf;
   const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [PW, PH], hotfixes: ['px_scaling'] });
   pdf.addImage(page.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, PW, PH);
-  if (rsOn()) {                                   // รวม Request Sheet เป็นหน้า 2 ของไฟล์เดียวกัน
+  if (rsOn() && !(opts && opts.noRs)) {           // รวม Request Sheet เป็นหน้า 2 ของไฟล์เดียวกัน
     pdf.addPage([816, 1056], 'portrait');         // Letter แนวตั้ง (816x1056 px ที่ 96 dpi)
     pdf.addImage(drawRequestSheet(rsData()).toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, 816, 1056);
   }
@@ -2055,7 +2055,17 @@ function reportError(err) {
 async function generatePDF() {
   const btn = document.getElementById('submitBtn');
   setBusy(btn, 'กำลังสร้าง...');
-  try { const r = buildPDF(); await savePDF(r); toast('✓ สร้างไฟล์ ' + r.filename + ' แล้ว (ดูในโฟลเดอร์ดาวน์โหลด)', 4000); } catch (err) { reportError(err); }
+  try {
+    // บันทึกลงเครื่อง: ใบแจ้งซ่อม และ Request Sheet (ถ้าเลือกเขียนด้วย) แยกเป็น 2 ไฟล์ในการกดครั้งเดียว
+    const r = buildPDF({ noRs: true }); await savePDF(r);
+    const names = [r.filename];
+    if (rsOn()) {
+      const q = buildRsPDF();
+      await new Promise(res => setTimeout(res, 400));   // เว้นจังหวะให้เบราว์เซอร์รับไฟล์แรกก่อน
+      await savePDF(q); names.push(q.filename);
+    }
+    toast('✓ สร้างไฟล์ ' + names.join(' และ ') + ' แล้ว (ดูในโฟลเดอร์ดาวน์โหลด)', 4500);
+  } catch (err) { reportError(err); }
   setIdle(btn);
 }
 
@@ -3394,7 +3404,7 @@ function rsRenderSummary() {
   $id('rsNo').classList.toggle('sel', mode === 'no');
   $id('rsYes').classList.toggle('sel', mode === 'yes');
   box.classList.toggle('on', mode === 'yes');
-  $id('ogNoteSave').textContent = mode === 'yes' ? 'ใบแจ้งซ่อม + Request Sheet รวมในไฟล์เดียว' : '';
+  $id('ogNoteSave').textContent = mode === 'yes' ? 'PDF = 2 ไฟล์แยก (ใบแจ้งซ่อม + Request Sheet) · PowerPoint = ไฟล์เดียว 2 สไลด์' : '';
   $id('ogNoteMail').textContent = mode === 'yes' ? 'PDF = ไฟล์เดียว 2 หน้า · PowerPoint = .pptx + Request Sheet (PDF)' : 'เปิดเมนูแชร์พร้อมแนบไฟล์ให้';
   if (mode !== 'yes') { box.innerHTML = ''; return; }
   const sv = rsSideVal();
