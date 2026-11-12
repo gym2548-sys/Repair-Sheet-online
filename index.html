@@ -697,7 +697,6 @@ body.rs-open { overflow:hidden; }
       <div class="og-row">
         <button class="act" id="submitBtn" type="button" onclick="guard(generatePDF)"><span class="bi"><i class="ic" data-ic="download"></i></span><span class="at"><span class="bl">PDF</span><small>ดาวน์โหลด</small></span></button>
         <button class="act" id="pptxBtn" type="button" onclick="guard(generatePPTX)"><span class="bi"><i class="ic" data-ic="slides"></i></span><span class="at"><span class="bl">PowerPoint</span><small>ดาวน์โหลด</small></span></button>
-        <button class="act" id="rsPdfBtn" type="button" style="display:none;grid-column:1/-1" onclick="guard(generateRsPDF)"><span class="bi"><i class="ic" data-ic="download"></i></span><span class="at"><span class="bl">Request Sheet (PDF)</span><small>ดาวน์โหลดเฉพาะใบ Request Sheet</small></span></button>
       </div>
     </div>
     <div class="og">
@@ -705,6 +704,7 @@ body.rs-open { overflow:hidden; }
       <div class="og-row">
         <button class="act" id="shareBtn" type="button" onclick="guard(sharePDF)"><span class="bi"><i class="ic" data-ic="mail"></i></span><span class="at"><span class="bl">PDF</span><small>แนบส่งเมล</small></span></button>
         <button class="act" id="pptxShareBtn" type="button" onclick="guard(sharePPTX)"><span class="bi"><i class="ic" data-ic="mail"></i></span><span class="at"><span class="bl">PowerPoint</span><small>แนบส่งเมล</small></span></button>
+        <button class="act" id="rsShareBtn" type="button" style="display:none;grid-column:1/-1" onclick="guard(shareRsPDF)"><span class="bi"><i class="ic" data-ic="mail"></i></span><span class="at"><span class="bl">Request Sheet (PDF)</span><small>แนบส่งเมลเฉพาะใบ Request Sheet</small></span></button>
       </div>
     </div>
     <div id="mail-hint"></div>
@@ -2241,19 +2241,13 @@ async function generatePDF() {
   setIdle(btn);
 }
 
-// บันทึกเฉพาะ Request Sheet (Letter แนวตั้ง 1 หน้า)
+// ไฟล์ Request Sheet อย่างเดียว (Letter แนวตั้ง 1 หน้า) — ใช้ตอนส่งอีเมลเฉพาะ Request Sheet
 function buildRsPDF() {
   const { jsPDF } = window.jspdf;
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: [816, 1056], hotfixes: ['px_scaling'] });
   pdf.addImage(drawRequestSheet(rsData()).toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, 816, 1056);
   const moldNo = document.getElementById('moldNo').value.trim();
   return { pdf, filename: 'Request_Sheet_' + (moldNo || 'Blank').replace(/[\\/:*?"<>|\s]+/g, '_') + '.pdf' };
-}
-async function generateRsPDF() {
-  const btn = document.getElementById('rsPdfBtn');
-  setBusy(btn, 'กำลังสร้าง...');
-  try { const r = buildRsPDF(); await savePDF(r); toast('✓ สร้างไฟล์ ' + r.filename + ' แล้ว (ดูในโฟลเดอร์ดาวน์โหลด)', 4000); } catch (err) { reportError(err); }
-  setIdle(btn);
 }
 
 /* ============ บันทึกเป็น PowerPoint (.pptx) แบบแก้ไขได้ ============ */
@@ -2502,12 +2496,6 @@ async function buildPPTX() {
   bg.fillStyle = grad; bg.fillRect(0, 0, bar.width, bar.height);
   slide.addImage({ data: bar.toDataURL('image/png'), x: 0, y: pxIn(782), w: pxIn(PW), h: pxIn(10) });
 
-  if (rsOn()) {                                   // สไลด์ 2: Request Sheet (รูปเต็มความสูงสไลด์ วางกึ่งกลาง)
-    const s2 = pptx.addSlide();
-    const h2 = PH, w2 = PH * 612 / 792;
-    s2.addImage({ data: drawRequestSheet(rsData()).toDataURL('image/jpeg', 0.95), x: pxIn((PW - w2) / 2), y: 0, w: pxIn(w2), h: pxIn(h2) });
-  }
-
   return {
     pptx, moldNo,
     filename: 'Repair_Request_' + (moldNo || 'Blank').replace(/[\\/:*?"<>|\s]+/g, '_') + '.pptx'
@@ -2547,8 +2535,8 @@ function mailParts(kind) {
   const problem = document.getElementById('problem').value.trim();
   return {
     mold, problem,
-    subject: 'แจ้งซ่อม Mold ' + (mold || '-') + (problem ? ' : ' + problem : ''),
-    body: 'เรียนผู้เกี่ยวข้อง\n\nแจ้งซ่อม Mold: ' + (mold || '-') + '\nปัญหา: ' + (problem || '-') + '\n\nแนบไฟล์ ' + kind + (document.getElementById('rsMode').value === 'yes' ? ' (รวมใบแจ้งซ่อมและ Request Sheet ในไฟล์เดียว)' : '') + ' ตามเอกสารแนบ'
+    subject: kind === 'Request Sheet' ? 'Request Sheet Mold ' + (mold || '-') + (problem ? ' : ' + problem : '') : 'แจ้งซ่อม Mold ' + (mold || '-') + (problem ? ' : ' + problem : ''),
+    body: 'เรียนผู้เกี่ยวข้อง\n\nแจ้งซ่อม Mold: ' + (mold || '-') + '\nปัญหา: ' + (problem || '-') + '\n\nแนบไฟล์ ' + kind + (kind === 'PDF' && document.getElementById('rsMode').value === 'yes' ? ' (รวมใบแจ้งซ่อมและ Request Sheet ในไฟล์เดียว)' : '') + ' ตามเอกสารแนบ'
   };
 }
 function mailHref(kind) {
@@ -2606,7 +2594,7 @@ async function sharePPTX() {
     const r = await buildPPTX();
     const blob = await pptxBlob(r);
     const m = mailParts('PowerPoint');
-    const body = 'แจ้งซ่อม Mold: ' + (r.moldNo || '-') + '\nปัญหา: ' + (m.problem || '-') + (rsOn() ? '\n(ไฟล์เดียว: ใบแจ้งซ่อม + Request Sheet)' : '');
+    const body = 'แจ้งซ่อม Mold: ' + (r.moldNo || '-') + '\nปัญหา: ' + (m.problem || '-');
     const file = new File([blob], r.filename, { type: PPTX_MIME });
     const files = [file];
 
@@ -2624,7 +2612,42 @@ async function sharePPTX() {
     // 2) วิธีสำรอง: บันทึก PowerPoint แล้วเปิดอีเมลที่กรอกหัวข้อ/เนื้อหาไว้ให้ (ต้องแนบไฟล์เอง)
     await savePPTX(r, blob);
     const href = mailHref('PowerPoint');
-    hint.innerHTML = 'บันทึกไฟล์ <b>' + r.filename + '</b> แล้ว<br>กดปุ่มด้านล่างเพื่อเปิดอีเมลถึง ' + MAIL_TO + ' แล้วแนบไฟล์ที่เพิ่งบันทึก' + (rsOn() ? ' (1 ไฟล์ มีทั้งใบแจ้งซ่อมและ Request Sheet)' : '') + '<br><a href="' + href + '" target="_top">เปิดอีเมล →</a>';
+    hint.innerHTML = 'บันทึกไฟล์ <b>' + r.filename + '</b> แล้ว<br>กดปุ่มด้านล่างเพื่อเปิดอีเมลถึง ' + MAIL_TO + ' แล้วแนบไฟล์ที่เพิ่งบันทึก<br><a href="' + href + '" target="_top">เปิดอีเมล →</a>';
+    hint.style.display = 'block';
+  } catch (err) {
+    reportError(err);
+  } finally {
+    setIdle(btn);
+  }
+}
+
+async function shareRsPDF() {
+  const btn = document.getElementById('rsShareBtn');
+  const hint = document.getElementById('mail-hint');
+  hint.style.display = 'none';
+  setBusy(btn, 'กำลังเตรียมไฟล์...');
+
+  try {
+    const r = buildRsPDF();
+    const m = mailParts('Request Sheet');
+    const body = 'แจ้งซ่อม Mold: ' + (m.mold || '-') + '\nปัญหา: ' + (m.problem || '-') + '\n(แนบเฉพาะ Request Sheet)';
+    const file = new File([r.pdf.output('blob')], r.filename, { type: 'application/pdf' });
+    const files = [file];
+
+    // 1) แชร์ไฟล์ตรงๆ ผ่านเมนูแชร์ของมือถือ (เลือก Mail / Outlook / LINE ได้)
+    if (navigator.canShare && navigator.canShare({ files })) {
+      try {
+        await navigator.share({ files, title: m.subject, text: body });
+        return;
+      } catch (err) {
+        if (err && err.name === 'AbortError') return;   // ผู้ใช้กดยกเลิก
+      }
+    }
+
+    // 2) วิธีสำรอง: บันทึก PDF แล้วเปิดอีเมลที่กรอกหัวข้อ/เนื้อหาไว้ให้ (ต้องแนบไฟล์เอง)
+    await savePDF(r);
+    const href = mailHref('Request Sheet');
+    hint.innerHTML = 'บันทึกไฟล์ <b>' + r.filename + '</b> แล้ว<br>กดปุ่มด้านล่างเพื่อเปิดอีเมลถึง ' + MAIL_TO + ' แล้วแนบไฟล์ PDF ที่เพิ่งบันทึก<br><a href="' + href + '" target="_top">เปิดอีเมล →</a>';
     hint.style.display = 'block';
   } catch (err) {
     reportError(err);
@@ -3460,8 +3483,8 @@ const RS_FEATURES = ['Repair Mold insert', 'Urgent new mold insert', 'New spare 
 const RS_LINES = ['VHP', 'EV14', 'EV6', 'LSR', 'Microflex', 'Other'];
 const RS_INSP = ['Before and after report', '3D inspection report', '2D inspection report', 'No need inspection report'];
 const RS_MULTI = {
-  feature: { box: 'rsFeatureBox', hid: 'rsFeature', other: 'rsFeatureOther', opts: RS_FEATURES, ph: 'เลือกประเภทคำร้อง (เลือกได้หลายข้อ)' },
-  line:    { box: 'rsLineBox',    hid: 'rsLine',    other: 'rsLineOther',    opts: RS_LINES,    ph: 'เลือกไลน์การผลิต (เลือกได้หลายไลน์)' },
+  feature: { box: 'rsFeatureBox', hid: 'rsFeature', other: 'rsFeatureOther', opts: RS_FEATURES, single: true, ph: 'เลือกประเภทคำร้อง (เลือกได้ 1 ข้อ)' },
+  line:    { box: 'rsLineBox',    hid: 'rsLine',    other: 'rsLineOther',    opts: RS_LINES,    single: true, ph: 'เลือกไลน์การผลิต (เลือกได้ 1 ไลน์)' },
   insp:    { box: 'rsInspBox',    hid: 'rsInsp',    opts: RS_INSP, excl: 'No need inspection report', ph: 'เลือก Inspection report (เลือกได้หลายข้อ)' },
   side:    { box: 'rsSideBox',    hid: 'rsSide',    opts: ['Mold', 'Other part'], single: true, ph: 'เลือก Mold หรือ Other part',
              lab: { 'Mold': 'Mold · รายละเอียดแม่พิมพ์', 'Other part': 'Other part · ชิ้นงานที่ไม่ใช่ชิ้นส่วนแม่พิมพ์ / งานทั่วไป' } }
@@ -3622,9 +3645,9 @@ function rsRenderSummary() {
   $id('rsNo').classList.toggle('sel', mode === 'no');
   $id('rsYes').classList.toggle('sel', mode === 'yes');
   box.classList.toggle('on', mode === 'yes');
-  $id('rsPdfBtn').style.display = mode === 'yes' ? '' : 'none';
-  $id('ogNoteSave').textContent = mode === 'yes' ? 'ใบแจ้งซ่อม + Request Sheet รวมในไฟล์เดียว' : '';
-  $id('ogNoteMail').textContent = mode === 'yes' ? 'แนบไฟล์เดียว (ใบแจ้งซ่อม + Request Sheet)' : 'เปิดเมนูแชร์พร้อมแนบไฟล์ให้';
+  $id('rsShareBtn').style.display = mode === 'yes' ? '' : 'none';
+  $id('ogNoteSave').textContent = mode === 'yes' ? 'PDF รวมใบแจ้งซ่อม + Request Sheet · PowerPoint มีเฉพาะใบแจ้งซ่อม' : '';
+  $id('ogNoteMail').textContent = mode === 'yes' ? 'PDF รวม 2 ใบ · มีปุ่มส่งเฉพาะ Request Sheet' : 'เปิดเมนูแชร์พร้อมแนบไฟล์ให้';
   if (mode !== 'yes') { box.innerHTML = ''; return; }
   const sv = rsSideVal();
   const kind = sv === 'mold' ? 'Mold' + (rsVal('rsProdName') ? ' · ' + rsVal('rsProdName') : '')
@@ -3659,6 +3682,7 @@ function rsRenderSummary() {
 }
 
 function rsSync() {
+  ['rsFeature', 'rsLine'].forEach(id => { const f = rsArr(id); if (f.length > 1) $id(id).value = JSON.stringify([f[f.length - 1]]); });   // Request Feature / Production line เลือกได้อย่างละ 1
   rsAutoProd();
   Object.keys(RS_MULTI).forEach(rsRenderMulti);
   rsRenderAuto('rsRequestor', 'requestBy', 'Request by');
