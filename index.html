@@ -598,7 +598,7 @@ body.rs-open { overflow:hidden; }
   <section class="step" id="rsCard">
     <div class="sh"><span class="sn">RS</span><div><h3>Request Sheet</h3><p>ต้องเขียนใบ Tool Making Work Request ด้วยไหม?</p></div></div>
     <div class="og-row">
-      <button class="act" id="rsNo" type="button"><span class="bi"><i class="ic" data-ic="x"></i></span><span class="at"><span class="bl">ไม่ต้อง</span><small>ใบแจ้งซ่อมอย่างเดียว</small></span></button>
+      <button class="act" id="rsNo" type="button"><span class="bi"><i class="ic" data-ic="x"></i></span><span class="at"><span class="bl">ไม่ต้อง</span><small>Repair Detailอย่างเดียว</small></span></button>
       <button class="act" id="rsYes" type="button"><span class="bi"><i class="ic" data-ic="pen"></i></span><span class="at"><span class="bl">เขียนด้วย</span><small>เปิดหน้ากรอกใบ</small></span></button>
     </div>
     <div id="rsSummary"></div>
@@ -695,16 +695,16 @@ body.rs-open { overflow:hidden; }
     <div class="og">
       <div class="og-t">บันทึกลงเครื่อง <small id="ogNoteSave"></small></div>
       <div class="og-row">
-        <button class="act" id="submitBtn" type="button" onclick="guard(generatePDF)"><span class="bi"><i class="ic" data-ic="download"></i></span><span class="at"><span class="bl">PDF</span><small>ดาวน์โหลด</small></span></button>
-        <button class="act" id="pptxBtn" type="button" onclick="guard(generatePPTX)"><span class="bi"><i class="ic" data-ic="slides"></i></span><span class="at"><span class="bl">PowerPoint</span><small>ดาวน์โหลด</small></span></button>
+        <button class="act" id="submitBtn" type="button" onclick="guard(generatePDF)"><span class="bi"><i class="ic" data-ic="download"></i></span><span class="at"><span class="bl">Request/Detail</span><small>ดาวน์โหลดPDF</small></span></button>
+        <button class="act" id="pptxBtn" type="button" onclick="guard(generatePPTX)"><span class="bi"><i class="ic" data-ic="slides"></i></span><span class="at"><span class="bl">PowerPoint</span><small>ดาวน์โหลดลงเครื่อง</small></span></button>
       </div>
     </div>
     <div class="og">
       <div class="og-t">ส่งทางอีเมล <small id="ogNoteMail">เปิดเมนูแชร์พร้อมแนบไฟล์ให้</small></div>
       <div class="og-row">
-        <button class="act" id="shareBtn" type="button" onclick="guard(sharePDF)"><span class="bi"><i class="ic" data-ic="mail"></i></span><span class="at"><span class="bl">PDF</span><small>แนบส่งเมล</small></span></button>
-        <button class="act" id="pptxShareBtn" type="button" onclick="guard(sharePPTX)"><span class="bi"><i class="ic" data-ic="mail"></i></span><span class="at"><span class="bl">PowerPoint</span><small>แนบส่งเมล</small></span></button>
-        <button class="act" id="rsShareBtn" type="button" style="display:none;grid-column:1/-1" onclick="guard(shareRsPDF)"><span class="bi"><i class="ic" data-ic="mail"></i></span><span class="at"><span class="bl">Request Sheet (PDF)</span><small>แนบส่งเมลเฉพาะใบ Request Sheet</small></span></button>
+        <button class="act" id="shareBtn" type="button" onclick="guard(sharePDF)"><span class="bi"><i class="ic" data-ic="mail"></i></span><span class="at"><span class="bl">Request/Detail</span><small>แนบส่งเมลPDF</small></span></button>
+        <button class="act" id="pptxShareBtn" type="button" onclick="guard(sharePPTX)"><span class="bi"><i class="ic" data-ic="mail"></i></span><span class="at"><span class="bl">PowerPoint</span><small>แนบส่งเมลPowerPoint</small></span></button>
+        <button class="act" id="rsShareBtn" type="button" style="display:none;grid-column:1/-1" onclick="guard(shareRsPDF)"><span class="bi"><i class="ic" data-ic="mail"></i></span><span class="at"><span class="bl">Request Sheet (เท่านั้น)</span><small>แนบส่งเมลเฉพาะใบ Request Sheet</small></span></button>
       </div>
     </div>
     <div id="mail-hint"></div>
@@ -903,7 +903,7 @@ body.rs-open { overflow:hidden; }
 <div id="pv" onclick="if (event.target === this) closePreview()">
   <div class="pv-box">
     <div class="pv-head"><span>Preview<small>แตะรูปเพื่อซูมเข้า/ออก</small></span><button class="mini icon" type="button" title="ปิด" onclick="closePreview()"><i class="ic" data-ic="x"></i></button></div>
-    <div class="pv-tabs" id="pvTabs"><button type="button" id="pvTabRepair" onclick="pvTab('repair')">ใบแจ้งซ่อม</button><button type="button" id="pvTabRs" onclick="pvTab('rs')">Request Sheet</button></div>
+    <div class="pv-tabs" id="pvTabs"><button type="button" id="pvTabRepair" onclick="pvTab('repair')">Repair Detail</button><button type="button" id="pvTabRs" onclick="pvTab('rs')">Request Sheet</button></div>
     <div class="pv-scroll"><img id="pv-img" alt="Preview" onclick="document.getElementById('pv').classList.toggle('zoom')"><img id="pv-img2" class="portrait" alt="Preview Request Sheet" style="display:none" onclick="document.getElementById('pv').classList.toggle('zoom')"></div>
   </div>
 </div>
@@ -2234,7 +2234,7 @@ async function generatePDF() {
   const btn = document.getElementById('submitBtn');
   setBusy(btn, 'กำลังสร้าง...');
   try {
-    // ไฟล์เดียว: หน้า 1 ใบแจ้งซ่อม + หน้า 2 Request Sheet (ถ้าเลือกเขียนด้วย)
+    // ไฟล์เดียว: หน้า 1 Repair Detail + หน้า 2 Request Sheet (ถ้าเลือกเขียนด้วย)
     const r = buildPDF(); await savePDF(r);
     toast('✓ สร้างไฟล์ ' + r.filename + ' แล้ว (ดูในโฟลเดอร์ดาวน์โหลด)', 4000);
   } catch (err) { reportError(err); }
@@ -2536,7 +2536,7 @@ function mailParts(kind) {
   return {
     mold, problem,
     subject: kind === 'Request Sheet' ? 'Request Sheet Mold ' + (mold || '-') + (problem ? ' : ' + problem : '') : 'แจ้งซ่อม Mold ' + (mold || '-') + (problem ? ' : ' + problem : ''),
-    body: 'เรียนผู้เกี่ยวข้อง\n\nแจ้งซ่อม Mold: ' + (mold || '-') + '\nปัญหา: ' + (problem || '-') + '\n\nแนบไฟล์ ' + kind + (kind === 'PDF' && document.getElementById('rsMode').value === 'yes' ? ' (รวมใบแจ้งซ่อมและ Request Sheet ในไฟล์เดียว)' : '') + ' ตามเอกสารแนบ'
+    body: 'เรียนผู้เกี่ยวข้อง\n\nแจ้งซ่อม Mold: ' + (mold || '-') + '\nปัญหา: ' + (problem || '-') + '\n\nแนบไฟล์ ' + kind + (kind === 'PDF' && document.getElementById('rsMode').value === 'yes' ? ' (รวม Repair Detail และ Request Sheet ในไฟล์เดียว)' : '') + ' ตามเอกสารแนบ'
   };
 }
 function mailHref(kind) {
@@ -2557,7 +2557,7 @@ async function sharePDF() {
 
   try {
     const r = buildPDF();
-    const body = 'แจ้งซ่อม Mold: ' + (r.moldNo || '-') + '\nปัญหา: ' + (r.problem || '-') + (rsOn() ? '\n(ไฟล์เดียว: ใบแจ้งซ่อม + Request Sheet)' : '');
+    const body = 'แจ้งซ่อม Mold: ' + (r.moldNo || '-') + '\nปัญหา: ' + (r.problem || '-') + (rsOn() ? '\n(ไฟล์เดียว: Repair Detail + Request Sheet)' : '');
     const file = new File([r.pdf.output('blob')], r.filename, { type: 'application/pdf' });
     const files = [file];
 
@@ -2575,7 +2575,7 @@ async function sharePDF() {
     // 2) วิธีสำรอง: บันทึก PDF แล้วเปิดอีเมลที่กรอกหัวข้อ/เนื้อหาไว้ให้ (ต้องแนบไฟล์เอง)
     await savePDF(r);
     const href = mailHref();
-    hint.innerHTML = 'บันทึกไฟล์ <b>' + r.filename + '</b> แล้ว<br>กดปุ่มด้านล่างเพื่อเปิดอีเมลถึง ' + MAIL_TO + ' แล้วแนบไฟล์ PDF ที่เพิ่งบันทึก' + (rsOn() ? ' (1 ไฟล์ มีทั้งใบแจ้งซ่อมและ Request Sheet)' : '') + '<br><a href="' + href + '" target="_top">เปิดอีเมล →</a>';
+    hint.innerHTML = 'บันทึกไฟล์ <b>' + r.filename + '</b> แล้ว<br>กดปุ่มด้านล่างเพื่อเปิดอีเมลถึง ' + MAIL_TO + ' แล้วแนบไฟล์ PDF ที่เพิ่งบันทึก' + (rsOn() ? ' (1 ไฟล์ มีทั้ง Repair Detail และ Request Sheet)' : '') + '<br><a href="' + href + '" target="_top">เปิดอีเมล →</a>';
     hint.style.display = 'block';
   } catch (err) {
     reportError(err);
@@ -3646,8 +3646,8 @@ function rsRenderSummary() {
   $id('rsYes').classList.toggle('sel', mode === 'yes');
   box.classList.toggle('on', mode === 'yes');
   $id('rsShareBtn').style.display = mode === 'yes' ? '' : 'none';
-  $id('ogNoteSave').textContent = mode === 'yes' ? 'PDF รวมใบแจ้งซ่อม + Request Sheet · PowerPoint มีเฉพาะใบแจ้งซ่อม' : '';
-  $id('ogNoteMail').textContent = mode === 'yes' ? 'PDF รวม 2 ใบ · มีปุ่มส่งเฉพาะ Request Sheet' : 'เปิดเมนูแชร์พร้อมแนบไฟล์ให้';
+  $id('ogNoteSave').textContent = mode === 'yes' ? 'Request&Detail Sheet PDF · PowerPoint มีเฉพาะใบแจ้งซ่อม' : '';
+  $id('ogNoteMail').textContent = mode === 'yes' ? 'Request&Detail รวม 2 ใบ · มีปุ่มส่งเฉพาะ Request Sheet' : 'เปิดเมนูแชร์พร้อมแนบไฟล์ให้';
   if (mode !== 'yes') { box.innerHTML = ''; return; }
   const sv = rsSideVal();
   const kind = sv === 'mold' ? 'Mold' + (rsVal('rsProdName') ? ' · ' + rsVal('rsProdName') : '')
