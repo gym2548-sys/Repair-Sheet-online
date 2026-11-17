@@ -844,6 +844,13 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline:3px so
   #dlg.on, #pv.on, #dlg.on .dlg-box, #pv.on .pv-box, #editor.on, #rs.on, #img-list > .img-card, .rs-ms-list, .rs-chip, #draftbar.on { animation:none; }
   .act, #stepper .st, #toolbar .tool, #selbar .mini, #toast { transition:none; }
 }
+
+/* ===== v28 — กันกดทะลุไปด้านหลังตอนเปิดหน้าต่างแก้ไข / Request Sheet ===== */
+/* เดิมความมืดด้านหลังเป็นแค่ box-shadow ซึ่งรับการแตะไม่ได้ จึงกดปุ่มข้างหลังได้ → ใส่ฉากกั้นจริงที่รับการแตะ */
+body.rs-open::after, body.editing::after { content:""; position:fixed; inset:0; background:rgba(20,26,60,.12); -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); touch-action:none; overscroll-behavior:contain; animation:vt-fade .25s ease-out; }
+body.editing::after { z-index:89; }
+body.rs-open::after { z-index:94; }
+@media (prefers-reduced-motion: reduce) { body.rs-open::after, body.editing::after { animation:none; } }
 </style>
 </head>
 <body>
@@ -4084,10 +4091,12 @@ function rsOpen() {
   if (!$id('rsReqDate').value) $id('rsReqDate').value = rsToday();   // วันที่ร้องขอ: ใส่วันนี้ให้ก่อน แก้ได้
   rsCloseLists(); rsSync();
   $id('rs').classList.add('on'); document.body.classList.add('rs-open');
+  const appBox = document.querySelector('.app-container'); if (appBox) appBox.inert = true;   // ด้านหลังกด/โฟกัสด้วย Tab ไม่ได้ขณะเปิดหน้าต่างนี้
   $id('rs').querySelector('.ed-body').scrollTop = 0;
 }
 function rsClose() {
   $id('rs').classList.remove('on'); document.body.classList.remove('rs-open');
+  const appBox = document.querySelector('.app-container'); if (appBox) appBox.inert = false;
   rsSync();
 }
 function rsDone() { rsClose(); toast('บันทึก Request Sheet แล้ว'); }
