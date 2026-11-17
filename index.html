@@ -763,7 +763,7 @@ body[data-view="rs"] #stepper, body[data-view="rs"] .layout #step2, body[data-vi
 
   <div id="draftbar"><span class="dm" id="draftmsg"></span><button type="button" class="mini link" id="draftNew">เริ่มใบใหม่</button></div>
   <section class="step" id="step1">
-    <div class="sh"><span class="sn">1</span><div><h3>ข้อมูลเอกสาร</h3><p>กรอก1.รายละเอียดแม่พิมพ์และผู้แจ้ง ถ้าทำแค่ ใบแจ้งซ่อม ถ้าทำใบรายละเอียดจุดซ่อม กรอก 2.รายละเอียดแจ้งซ่อม ด้วย</p></div></div>
+    <div class="sh"><span class="sn">1</span><div><h3>ข้อมูลเอกสาร</h3><p>กรอกก่อนเป็นอันดับแรก — ใช้ร่วมกันทั้งใบแจ้งซ่อมและใบขอทำงาน · ช่องที่มี <span style="color:var(--err)">*</span> ต้องกรอก</p></div></div>
     <div class="fgrp">
       <h4 class="fh"><span class="fn">1.</span> รายละเอียดแม่พิมพ์และผู้แจ้ง</h4>
       <div class="fg-grid g3">
@@ -3511,6 +3511,15 @@ function drawRequestSheet(d) {
     let px = o.px * DK; while (px > 9 && W(s, px, o.bold, o.italic) > maxW) px -= 1;
     T(s, x, y, Object.assign({}, o, { px }));
   }
+  // ข้อความกึ่งกลางช่องทั้งแนวนอนและแนวตั้ง: (cx, cy) = จุดกึ่งกลางช่อง · วัดขอบตัวอักษรจริง ไม่พึ่ง baseline 'middle' (ฟอนต์ไทยทำให้เยื้องลง)
+  function midT(s, cx, cy, maxW, o) {
+    o = Object.assign({ px: 16 }, o || {});
+    let px = o.px * (o.noDK ? 1 : DK); while (px > 9 && W(s, px, o.bold, o.italic) > maxW) px -= 1;
+    g.font = font(px, o.bold, o.italic); g.textBaseline = 'alphabetic';   // ต้องตั้ง baseline ก่อนวัด ไม่งั้นค่าที่วัดได้เพี้ยน
+    const m = g.measureText(s), asc = m.actualBoundingBoxAscent || px * FK * 0.72, desc = m.actualBoundingBoxDescent || 0;
+    g.fillStyle = o.color || INK; g.textAlign = 'center'; g.textBaseline = 'alphabetic';
+    g.fillText(s, cx, cy + (asc - desc) / 2);
+  }
   function wrapLines(s, maxW, px) {
     const out = []; let cur = '';
     const put = tok => {
@@ -3628,11 +3637,11 @@ function drawRequestSheet(d) {
   /* ---------- วันที่ ---------- */
   const dsh = v => v || '....../....../......';
   starT('Request date:', 88, 372, { px: 13 }); T('วันที่ร้องขอ:', 88, 386, { px: 13, bold: true });
-  if (d.reqDate) fitT(d.reqDate, 235, 384, 92, { px: 15, align: 'center', bold: true }); else T(dsh(''), 235, 384, { px: 15, align: 'center', color: '#444' });
+  if (d.reqDate) midT(d.reqDate, 235.5, 378, 90, { px: 15, bold: true }); else midT(dsh(''), 235.5, 378, 90, { px: 15, noDK: true, color: '#444' });
   T('Target date:', 292, 372, { px: 13, bold: true }); T('เป้าหมาย:', 292, 386, { px: 13, bold: true });
-  if (d.targetDate) fitT(d.targetDate, 435, 384, 88, { px: 15, align: 'center', bold: true }); else T(dsh(''), 435, 384, { px: 15, align: 'center', color: '#444' });
+  if (d.targetDate) midT(d.targetDate, 435.5, 378, 88, { px: 15, bold: true }); else midT(dsh(''), 435.5, 378, 88, { px: 15, noDK: true, color: '#444' });
   T('Finish date:', 490, 372, { px: 13, bold: true }); T('วันที่เสร็จจริง:', 490, 386, { px: 13, bold: true });
-  if (d.finishDate) fitT(d.finishDate, 640, 384, 100, { px: 15, align: 'center', bold: true }); else T(dsh(''), 640, 384, { px: 15, align: 'center', color: '#444' });
+  if (d.finishDate) midT(d.finishDate, 639.5, 378, 100, { px: 15, bold: true }); else midT(dsh(''), 639.5, 378, 100, { px: 15, noDK: true, color: '#444' });
 
   /* ---------- Inspection report ---------- */
   T('*', 98, 416, { px: 19, bold: true }); T('Inspection report / document เพิ่มเติม :', 109, 414, { px: 13, bold: true });
