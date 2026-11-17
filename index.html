@@ -680,6 +680,10 @@ body.rs-open { overflow:hidden; }
 #viewTabs .tb { font-size:11px; font-weight:700; padding:2px 9px; border-radius:999px; background:#fff; color:var(--mute); }
 #viewTabs .tb[data-s="yes"] { background:var(--ok); color:#fff; }
 body:not([data-view="rs"]) #rsCard, body:not([data-view="rs"]) #rsStep4 { display:none; }
+
+/* ปุ่มที่อยู่ในแถวเดียวกันตามลำพัง (เช่น Request Sheet ดาวน์โหลด / แนบส่งเมล) ให้ยาวเต็มความกว้างของการ์ด ไม่เหลือที่ว่างครึ่งแถว */
+.og-row .act:only-child { grid-column:1 / -1; }
+#rsStep4 .og-row { grid-template-columns:1fr; }
 body[data-view="rs"] #stepper, body[data-view="rs"] .layout #step2, body[data-view="rs"] .layout #step3, body[data-view="rs"] .layout #step4 { display:none; }
 #rsCard .sh .sn, #rsStep4 .sh .sn { width:34px; height:34px; font-size:15px; letter-spacing:0; }
 #rsCard .sh h3 { font-size:18px; }
@@ -753,6 +757,31 @@ body[data-view="rs"] #stepper, body[data-view="rs"] .layout #step2, body[data-vi
   .fg-grid.g3 { grid-template-columns:repeat(3, minmax(0, 1fr)); }
   .fg-grid.g2 { grid-template-columns:repeat(2, minmax(0, 1fr)); }
   .fg-grid .wide { grid-column:1 / -1; }
+}
+
+/* ===== v25 — เลือกเอกสาร: แคปซูลเลื่อนตามนิ้วได้ (มือถือ / iPad / แท็บเล็ต / เมาส์) ===== */
+#viewTabs.lens-on { position:relative; touch-action:pan-y; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; -webkit-tap-highlight-color:transparent; cursor:grab; }
+#viewTabs.lens-on.dragging { cursor:grabbing; }
+#viewTabs.lens-on button { position:relative; z-index:1; background:transparent; box-shadow:none; transition:color .2s; touch-action:pan-y; }
+#viewTabs.lens-on button:hover { background:transparent; }
+#viewTabs.lens-on button.on, #viewTabs.lens-on button.pre { color:#fff; background:transparent; box-shadow:none; }
+#viewTabs.lens-on.press button.on:not(.pre) { color:var(--mute); }
+#viewTabs .vt-lens { position:absolute; left:0; top:0; width:0; height:0; z-index:0; pointer-events:none; border-radius:999px;
+  background:var(--p); box-shadow:0 6px 16px rgba(67,97,255,.3);
+  transform:translate3d(var(--lx,0px),0,0) scale(1,1); transform-origin:50% 50%;
+  transition:transform .42s cubic-bezier(.22,1.2,.36,1), width .42s cubic-bezier(.22,1.2,.36,1), height .42s cubic-bezier(.22,1.2,.36,1), top .42s cubic-bezier(.22,1.2,.36,1), background .2s, box-shadow .2s; }
+#viewTabs .vt-lens.snap { transition:none; }
+/* กดค้าง/ลาก: แคปซูลพองขึ้นเป็นกระจกใส ๆ เหมือนแถบเมนู iOS */
+#viewTabs.press .vt-lens { transform:translate3d(var(--lx,0px),0,0) scale(1.1,1.22);
+  background:linear-gradient(180deg, rgba(255,255,255,.94), rgba(223,228,255,.8));
+  -webkit-backdrop-filter:blur(3px) saturate(1.6); backdrop-filter:blur(3px) saturate(1.6);
+  box-shadow:0 12px 28px rgba(67,97,255,.28), 0 0 0 1.5px rgba(67,97,255,.45), inset 0 2px 0 rgba(255,255,255,.95), inset 0 -2px 8px rgba(67,97,255,.18); }
+#viewTabs.lens-on.press button.pre { color:var(--p); }
+/* ขณะลาก ให้แคปซูลตามนิ้วทันที (ไม่หน่วง) */
+#viewTabs.dragging .vt-lens { transition:width .2s, height .2s, background .2s, box-shadow .2s; }
+@media (prefers-reduced-motion: reduce) {
+  #viewTabs .vt-lens { transition:none; }
+  #viewTabs.press .vt-lens { transform:translate3d(var(--lx,0px),0,0); }
 }
 </style>
 </head>
@@ -4034,16 +4063,110 @@ hydrateIcons();
 refreshUI();
 </script>
 <script>
-/* แท็บแยกเอกสาร: ใบแจ้งซ่อม / Request Sheet */
+/* แท็บแยกเอกสาร: ใบแจ้งซ่อม / Request Sheet — แตะ หรือ "ลากนิ้ว" ให้แคปซูลเลื่อนไปมาได้ */
 (function () {
+  const bar = document.getElementById('viewTabs');
   const tabs = Array.prototype.slice.call(document.querySelectorAll('#viewTabs [data-view]'));
+  let current = 'repair';
+  const lens = document.createElement('span');
+  lens.className = 'vt-lens'; lens.setAttribute('aria-hidden', 'true');
+  bar.insertBefore(lens, bar.firstChild);
+  bar.classList.add('lens-on');
+
+  function tabOf(v) { return tabs.filter(t => t.dataset.view === v)[0]; }
+  function sizeLens(btn) {
+    lens.style.width = btn.offsetWidth + 'px';
+    lens.style.height = btn.offsetHeight + 'px';
+    lens.style.top = btn.offsetTop + 'px';
+  }
+  function placeLens(btn, instant) {
+    if (!btn) return;
+    if (instant) lens.classList.add('snap');
+    sizeLens(btn);
+    lens.style.setProperty('--lx', btn.offsetLeft + 'px');
+    if (instant) { void lens.offsetWidth; lens.classList.remove('snap'); }
+  }
+  function mark(btn) { tabs.forEach(t => t.classList.toggle('pre', t === btn)); }
+
   function setView(v) {
+    const changed = v !== current;
+    current = v;
     document.body.dataset.view = v;
     tabs.forEach(t => { const on = t.dataset.view === v; t.classList.toggle('on', on); t.setAttribute('aria-selected', on); });
-    window.scrollTo({ top: 0 });
+    placeLens(tabOf(v));
+    if (changed) window.scrollTo({ top: 0 });
   }
-  tabs.forEach(t => t.addEventListener('click', () => setView(t.dataset.view)));
+
+  /* ปุ่มใกล้กึ่งกลางแคปซูลที่สุด */
+  function nearest(centerX) {
+    let best = tabs[0], bd = 1e9;
+    tabs.forEach(t => { const d = Math.abs(t.offsetLeft + t.offsetWidth / 2 - centerX); if (d < bd) { bd = d; best = t; } });
+    return best;
+  }
+
+  let pid = null, startX = 0, startLeft = 0, moved = false, suppress = false;
+  const THRESH = 6;
+  function localX(e) { return e.clientX - bar.getBoundingClientRect().left; }
+  function lensLeftFor(e) {
+    const w = lens.offsetWidth, minL = tabs[0].offsetLeft, maxL = tabs[tabs.length - 1].offsetLeft + tabs[tabs.length - 1].offsetWidth - w;
+    return Math.max(minL, Math.min(maxL, localX(e) - w / 2));
+  }
+
+  bar.addEventListener('pointerdown', e => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    pid = e.pointerId; moved = false; startX = e.clientX;
+    bar.classList.add('press');
+    const b = nearest(localX(e));
+    mark(b);
+    lens.style.setProperty('--lx', b.offsetLeft + 'px');
+  });
+  bar.addEventListener('pointermove', e => {
+    if (pid === null || e.pointerId !== pid) return;
+    if (!moved && Math.abs(e.clientX - startX) < THRESH) return;
+    if (!moved) {
+      moved = true;
+      bar.classList.add('dragging');
+      try { bar.setPointerCapture(pid); } catch (_) {}
+    }
+    const left = lensLeftFor(e);
+    lens.style.setProperty('--lx', left + 'px');
+    mark(nearest(left + lens.offsetWidth / 2));
+  });
+  function finish(e, cancelled) {
+    if (pid === null || (e && e.pointerId !== pid)) return;
+    const wasMoved = moved;
+    const target = cancelled ? tabOf(current) : (wasMoved ? nearest(parseFloat(lens.style.getPropertyValue('--lx')) + lens.offsetWidth / 2) : null);
+    try { bar.releasePointerCapture(pid); } catch (_) {}
+    pid = null; moved = false;
+    bar.classList.remove('press', 'dragging');
+    mark(null);
+    if (wasMoved) {
+      suppress = true; setTimeout(() => { suppress = false; }, 60);
+      if (target) setView(target.dataset.view);
+    } else if (cancelled) {
+      placeLens(tabOf(current));
+    }
+  }
+  bar.addEventListener('pointerup', e => finish(e, false));
+  bar.addEventListener('pointercancel', e => finish(e, true));
+  bar.addEventListener('lostpointercapture', e => { if (e.target === bar && pid !== null && moved) finish(e, false); });
+
+  tabs.forEach(t => t.addEventListener('click', e => {
+    if (suppress) { e.preventDefault(); return; }
+    setView(t.dataset.view);
+  }));
+  bar.addEventListener('dragstart', e => e.preventDefault());
+
+  /* หมุนจอ iPad / ย่อขยายหน้าต่าง / โหลดฟอนต์เสร็จ → วางแคปซูลใหม่ให้ตรงปุ่ม */
+  function relayout() { if (pid === null) placeLens(tabOf(current), true); }
+  window.addEventListener('resize', relayout);
+  window.addEventListener('orientationchange', relayout);
+  window.addEventListener('load', relayout);
+  if (window.ResizeObserver) { const ro = new ResizeObserver(relayout); ro.observe(bar); }
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(relayout);
+
   document.body.dataset.view = 'repair';
+  placeLens(tabOf('repair'), true);
 })();
 </script>
 </body>
