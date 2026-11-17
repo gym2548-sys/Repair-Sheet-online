@@ -783,6 +783,67 @@ body[data-view="rs"] #stepper, body[data-view="rs"] .layout #step2, body[data-vi
   #viewTabs .vt-lens { transition:none; }
   #viewTabs.press .vt-lens { transform:translate3d(var(--lx,0px),0,0); }
 }
+
+/* ===== v26 — โฉมใหม่: พื้นหลังออโรร่า · การ์ดนุ่ม ๆ · ปุ่มไล่สี · แอนิเมชันเข้า (เปลี่ยนแค่หน้าตา ไม่แตะการทำงาน) ===== */
+html { background:#f4f6ff; }
+body { background:radial-gradient(900px 520px at 8% -8%, #dfe4ff 0, transparent 62%), radial-gradient(760px 480px at 100% 2%, #ffe6ee 0, transparent 58%), radial-gradient(700px 520px at 50% 108%, #e3f6ff 0, transparent 60%), #f4f6ff; background-attachment:fixed; }
+.app-container { border-radius:30px; border:1px solid rgba(255,255,255,.9); box-shadow:0 1px 2px rgba(31,42,90,.06), 0 24px 60px rgba(67,97,255,.16); }
+.step { background:var(--bosch-bar) top / 100% 5px no-repeat, linear-gradient(180deg,#f8f9ff,#eef1ff); border:1px solid #e2e7ff; border-radius:26px; box-shadow:0 1px 2px rgba(31,42,90,.05), 0 12px 30px rgba(67,97,255,.10); }
+.sh .sn, #rsCard .sh .sn, #rsStep4 .sh .sn { background:linear-gradient(135deg,#7b90ff,#4361ff); box-shadow:0 6px 14px rgba(67,97,255,.35), inset 0 1px 0 rgba(255,255,255,.5); }
+.sh h3 { letter-spacing:.1px; }
+.step input[type=text], .step select { border:2px solid #e4e8ff; box-shadow:inset 0 1px 2px rgba(31,42,90,.05); transition:border-color .15s, box-shadow .15s, background .15s; }
+.step input[type=text]:focus, .step select:focus { box-shadow:0 0 0 4px rgba(67,97,255,.16); }
+#stepper .st { background:rgba(255,255,255,.72); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); border-color:#e4e8ff; transition:background .2s, color .2s, box-shadow .2s, transform .2s; }
+#stepper .st.cur { background:linear-gradient(135deg,#7b90ff,#4361ff); color:#fff; border-color:transparent; box-shadow:0 8px 18px rgba(67,97,255,.32); }
+#stepper .st.cur b { background:#fff; color:var(--p); }
+#viewTabs { background:linear-gradient(180deg,#e9edff,#f5f6ff); box-shadow:inset 0 1px 3px rgba(31,42,90,.10), 0 1px 0 #fff; border:1px solid #e2e7ff; }
+#viewTabs .vt-lens { background:linear-gradient(135deg,#7b90ff,#4361ff); box-shadow:0 8px 18px rgba(67,97,255,.32), inset 0 1px 0 rgba(255,255,255,.45); }
+.pick-t::before { content:""; align-self:center; width:5px; height:1.05em; border-radius:5px; background:linear-gradient(#7b90ff,#4361ff); }
+.cta.solid { background:linear-gradient(135deg,#6f86ff,#4361ff); box-shadow:0 10px 22px rgba(67,97,255,.34), inset 0 1px 0 rgba(255,255,255,.4); }
+.cta.soft { background:linear-gradient(135deg,#e8ecff,#dfe4ff); }
+.cta, .mini { transition:transform .18s cubic-bezier(.3,1.4,.5,1), box-shadow .18s, background .15s; }
+.cta:active { transform:scale(.97); }
+.mini:active { transform:scale(.94); }
+.mini.solid { background:linear-gradient(135deg,#6f86ff,#4361ff); }
+@keyframes vt-rise { from { opacity:0; transform:translateY(14px); } }
+.pick-t, #viewTabs, #stepper, .step { animation:vt-rise .55s cubic-bezier(.2,.8,.2,1) backwards; }
+#viewTabs { animation-delay:.05s; } #stepper { animation-delay:.1s; } .step { animation-delay:.12s; }
+@media (prefers-reduced-motion: reduce) { .pick-t, #viewTabs, #stepper, .step { animation:none; } }
+
+/* ===== v27 — ความสมูธทั้งหน้า: หน้าต่างลอย · แจ้งเตือน · ปุ่ม · รายการ · เลื่อนหน้า (CSS ล้วน ไม่แตะการทำงาน) ===== */
+@keyframes vt-fade { from { opacity:0; } }
+@keyframes vt-pop { from { opacity:0; scale:.92; translate:0 12px; } }
+@keyframes vt-sheet { from { opacity:0; translate:0 28px; } }
+button, .tool, .st, label.upload-btn-wrapper { -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline:3px solid rgba(67,97,255,.45); outline-offset:2px; }
+::selection { background:rgba(67,97,255,.22); }
+* { scrollbar-width:thin; scrollbar-color:#c5ccff transparent; }
+.step { scroll-margin-top:14px; }
+/* ปุ่มทุกแบบ: กดแล้วยุบเด้งนุ่ม ๆ */
+.act, #stepper .st, #toolbar .tool, #selbar .mini, .pv-head button { transition:transform .18s cubic-bezier(.3,1.4,.5,1), background .18s, color .18s, box-shadow .18s, border-color .18s; }
+.act:active, #toolbar .tool:active, #selbar .mini:active, .pv-head button:active { transform:scale(.95); }
+#stepper .st:active { transform:scale(.94); }
+#stepper .st:hover:not(.cur) { background:#fff; border-color:#cfd6ff; }
+#toolbar .tool.active { box-shadow:0 6px 14px rgba(67,97,255,.22); }
+/* หน้าต่างลอย: พื้นหลังเบลอ + กล่องเด้งขึ้นมา */
+#dlg, #pv { -webkit-backdrop-filter:blur(7px); backdrop-filter:blur(7px); }
+#dlg.on, #pv.on { animation:vt-fade .22s ease-out; }
+#dlg.on .dlg-box, #pv.on .pv-box { animation:vt-pop .42s cubic-bezier(.2,1.25,.4,1); }
+#dlg .dlg-box { border-radius:28px; box-shadow:0 2px 4px rgba(20,26,60,.08), 0 24px 60px rgba(20,26,60,.38); }
+#dlg li { border:1px solid #e2e7ff; }
+#pv .pv-box { border-radius:22px; }
+#editor.on, #rs.on { animation:vt-sheet .42s cubic-bezier(.2,.9,.25,1); }
+/* แจ้งเตือน (toast) */
+#toast { background:rgba(31,42,90,.92); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,.18); box-shadow:0 12px 30px rgba(20,26,60,.3); transition:opacity .25s ease, transform .4s cubic-bezier(.2,1.3,.4,1); }
+/* ของที่โผล่ขึ้นมาใหม่ */
+#img-list > .img-card { animation:vt-rise .45s cubic-bezier(.2,.8,.2,1) backwards; }
+.rs-ms-list { animation:vt-rise .24s cubic-bezier(.2,.8,.2,1); }
+.rs-chip { animation:vt-pop .3s cubic-bezier(.2,1.3,.4,1) backwards; }
+#draftbar.on { animation:vt-fade .3s ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  #dlg.on, #pv.on, #dlg.on .dlg-box, #pv.on .pv-box, #editor.on, #rs.on, #img-list > .img-card, .rs-ms-list, .rs-chip, #draftbar.on { animation:none; }
+  .act, #stepper .st, #toolbar .tool, #selbar .mini, #toast { transition:none; }
+}
 </style>
 </head>
 <body>
@@ -4089,12 +4150,14 @@ refreshUI();
   function mark(btn) { tabs.forEach(t => t.classList.toggle('pre', t === btn)); }
 
   function setView(v) {
-    const changed = v !== current;
+    /* ไม่เด้งขึ้นบนสุดแล้ว: จำตำแหน่งแถบเลือกเอกสารไว้ แล้วคงให้อยู่ที่เดิมบนหน้าจอหลังสลับ */
+    const topBefore = bar.getBoundingClientRect().top;
     current = v;
     document.body.dataset.view = v;
     tabs.forEach(t => { const on = t.dataset.view === v; t.classList.toggle('on', on); t.setAttribute('aria-selected', on); });
     placeLens(tabOf(v));
-    if (changed) window.scrollTo({ top: 0 });
+    const delta = bar.getBoundingClientRect().top - topBefore;
+    if (Math.abs(delta) > 1) window.scrollBy(0, delta);
   }
 
   /* ปุ่มใกล้กึ่งกลางแคปซูลที่สุด */
