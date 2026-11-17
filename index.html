@@ -1445,7 +1445,7 @@ function createItem(src) {
     if (item.textPos) {
       const q = item.textPos; item.textPos = null;
       setTimeout(() => {
-        const t = prompt('พิมพ์ข้อความ (เช่น P.512):');
+        const t = prompt('พิมพ์ข้อความ');
         if (t && t.trim()) { item.shapes.push({ t:'text', c:color, a:q, s:t.trim() }); render(item); }
       }, 0);
       return;
@@ -3179,12 +3179,14 @@ function histRestore(snap) {
   });
   items = snap.items.map(x => x.it);
   frameShapes = cl[cl.length - 1];
-  items.forEach(it => listEl.appendChild(it.card));                        // คืนรูปที่เคยลบ และเรียงลำดับการ์ดให้ตรงเดิม
+  // คืนรูปที่เคยลบ และเรียงลำดับการ์ดให้ตรงเดิม — แต่รูปที่กำลังแก้อยู่ในหน้าจอเต็มต้องอยู่ที่เดิม (ใส่ตัวยึดแทน) ไม่งั้นรูปจะหลุดออกจากหน้าแต่งรูปแล้ว "หาย"
+  items.forEach(it => listEl.appendChild(ed.cur && ed.cur !== 'frame' && ed.node === it.card && ed.ph ? ed.ph : it.card));
   selection = null; selDrag = null; fcur = null; fdrawing = false; drag = null; pinch = null;
   if (selected && !items.includes(selected)) selected = null;
   refreshSelUI(); refreshUI();
   items.forEach(it => render(it));
   scheduleFrame();
+  if (ed.cur && ed.cur !== 'frame' && !items.includes(ed.cur)) closeEditor();   // ย้อนจนรูปที่กำลังแก้ถูกเอาออก → ปิดหน้าแต่งรูปให้เอง ไม่ค้างหน้าว่าง
 }
 function updateUndoBtn() {
   const b = document.getElementById('undoBtn');
