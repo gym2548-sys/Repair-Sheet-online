@@ -935,6 +935,7 @@ body[data-view="rs"] #stepper, body[data-view="rs"] .layout #step2, body[data-vi
       <div class="og-row">
         <button class="act" id="shareBtn" type="button" onclick="guard(sharePDF)"><span class="bi"><i class="ic" data-ic="mail"></i></span><span class="at"><span class="bl">Repair Detail</span><small>แนบส่งเมลPDF</small></span></button>
         <button class="act" id="pptxShareBtn" type="button" onclick="guard(sharePPTX)"><span class="bi"><i class="ic" data-ic="mail"></i></span><span class="at"><span class="bl">PowerPoint</span><small>แนบส่งเมลPowerPoint</small></span></button>
+        <button class="act" id="shareBothBtn" type="button" style="grid-column:1 / -1" onclick="guard(() => guardRs(shareBothPDF))"><span class="bi"><i class="ic" data-ic="mail"></i></span><span class="at"><span class="bl">Repair Detail + Request Sheet</span><small>แนบส่งเมลPDF 2 ไฟล์ในอีเมลเดียว</small></span></button>
       </div>
     </div>
     <div id="mail-hint"></div>
@@ -2448,7 +2449,7 @@ function buildPDF() {
   pdf.addImage(page.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, PW, PH);
   return {
     pdf, moldNo, problem,
-    filename: 'Repair_Request_' + (moldNo || 'Blank').replace(/[\\/:*?"<>|\s]+/g, '_') + '.pdf',
+    filename: 'Repair_Detail_' + (moldNo || 'Blank').replace(/[\\/:*?"<>|\s]+/g, '_') + '.pdf',
     subject: 'แจ้งซ่อม Mold ' + (moldNo || '-') + (problem ? ' : ' + problem : '')
   };
 }
@@ -2820,6 +2821,45 @@ async function sharePDF() {
     await savePDF(r);
     const href = mailHref();
     hint.innerHTML = 'บันทึกไฟล์ <b>' + r.filename + '</b> แล้ว<br>กดปุ่มด้านล่างเพื่อเปิดอีเมลถึง ' + MAIL_TO + ' แล้วแนบไฟล์ PDF ที่เพิ่งบันทึก' + '<br><a href="' + href + '" target="_top">เปิดอีเมล →</a>';
+    hint.style.display = 'block';
+  } catch (err) {
+    reportError(err);
+  } finally {
+    setIdle(btn);
+  }
+}
+
+async function shareBothPDF() {
+  const btn = document.getElementById('shareBothBtn');
+  const hint = document.getElementById('mail-hint');
+  hint.style.display = 'none';
+  setBusy(btn, 'กำลังเตรียมไฟล์...');
+
+  try {
+    const r1 = buildPDF(), r2 = buildRsPDF();
+    const kind = 'Repair Detail + Request Sheet';
+    const m = mailParts(kind);
+    const body = 'แจ้งซ่อม Mold: ' + (r1.moldNo || m.mold || '-') + '\nปัญหา: ' + (m.problem || '-') + '\n(แนบ Repair Detail และ Request Sheet)';
+    const files = [
+      new File([r1.pdf.output('blob')], r1.filename, { type: 'application/pdf' }),
+      new File([r2.pdf.output('blob')], r2.filename, { type: 'application/pdf' })
+    ];
+
+    // 1) แชร์ 2 ไฟล์พร้อมกันผ่านเมนูแชร์ (เลือก Mail / Outlook / LINE ได้)
+    if (navigator.canShare && navigator.canShare({ files })) {
+      try {
+        await navigator.share({ files, title: m.subject, text: body });
+        return;
+      } catch (err) {
+        if (err && err.name === 'AbortError') return;   // ผู้ใช้กดยกเลิก
+      }
+    }
+
+    // 2) วิธีสำรอง: บันทึก PDF ทั้ง 2 ไฟล์ แล้วเปิดอีเมลที่กรอกหัวข้อ/เนื้อหาไว้ให้ (ต้องแนบไฟล์เอง)
+    await savePDF(r1);
+    await savePDF(r2);
+    const href = mailHref(kind);
+    hint.innerHTML = 'บันทึกไฟล์ <b>' + r1.filename + '</b> และ <b>' + r2.filename + '</b> แล้ว<br>กดปุ่มด้านล่างเพื่อเปิดอีเมลถึง ' + MAIL_TO + ' แล้วแนบไฟล์ PDF ทั้ง 2 ไฟล์ที่เพิ่งบันทึก<br><a href="' + href + '" target="_top">เปิดอีเมล →</a>';
     hint.style.display = 'block';
   } catch (err) {
     reportError(err);
